@@ -1,0 +1,32 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Bsta.ai RAG System — Requirements
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Core Streamlit Framework
+streamlit>=1.40.0
+
+# LangChain Stack (pinned to compatible minor versions)
+langchain>=0.3.0,<0.4.0
+langchain-core>=0.3.0,<0.4.0
+langchain-community>=0.3.0,<0.4.0
+langchain-text-splitters>=0.3.0,<0.4.0
+
+# LLM & Embedding Providers
+langchain-google-genai>=2.0.0
+langchain-huggingface>=0.1.0   # Replaces deprecated langchain_community embeddings
+google-generativeai>=0.8.0
+
+# Embedding Model Runtime
+sentence-transformers>=3.0.0
+transformers>=4.40.0
+torch                           # CPU-only install is handled by sentence-transformers
+
+# Vector Store
+faiss-cpu>=1.7.4
+
+# PDF Processing (pypdf replaces deprecated PyPDF2)
+pypdf>=4.0.0
+
+# Utilities
+python-dotenv>=1.0.0
+pydantic>=2.0.0
