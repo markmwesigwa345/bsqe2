@@ -51,11 +51,14 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 load_dotenv()
 try:
     if "GOOGLE_API_KEY" in st.secrets:
-        os.environ["GOOGLE_API_KEY"] = st.secrets["GOOGLE_API_KEY"]
+        # Strip potential whitespace or quotes around the key from secrets
+        os.environ["GOOGLE_API_KEY"] = str(st.secrets["GOOGLE_API_KEY"]).strip().strip('"').strip("'")
 except Exception:
     pass  # No secrets.toml found; fall back to .env
 
-if not os.getenv("GOOGLE_API_KEY"):
+if os.getenv("GOOGLE_API_KEY"):
+    os.environ["GOOGLE_API_KEY"] = os.getenv("GOOGLE_API_KEY").strip().strip('"').strip("'")
+else:
     st.error("⚠️ **GOOGLE_API_KEY not found!**")
     st.info(
         "**Local:** Add `GOOGLE_API_KEY=your-key` to `.env` or "
@@ -194,7 +197,8 @@ def load_vector_store(faiss_dir: str, subject_name: str):
 @st.cache_resource(show_spinner=False)
 def setup_qa_chain(_vector_store, subject_prompt: str):
     """Build the LCEL QA chain for the given vector store and prompt."""
-    llm = ChatGoogleGenerativeAI(temperature=0, model="gemini-3-flash-preview")
+    api_key = os.getenv("GOOGLE_API_KEY")
+    llm = ChatGoogleGenerativeAI(temperature=0, model="gemini-3-flash-preview", google_api_key=api_key)
     prompt = ChatPromptTemplate.from_template(subject_prompt)
     retriever = _vector_store.as_retriever(
         search_type="similarity",
