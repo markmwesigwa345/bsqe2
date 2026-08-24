@@ -68,52 +68,27 @@ else:
     )
     st.stop()
 
-# ── Custom CSS ────────────────────────────────────────────────────────────────
-st.markdown(
-    """
-    <style>
-    body {
-        color: #FAFAFA;
-        background-color: #020203;
-    }
-    .stTextInput > div > div > input {
-        background-color: #262730;
-        color: #FAFAFA;
-    }
-    .stButton > button {
-        background-color: #007bff;
-        color: white;
-        border: none;
-        border-radius: 6px;
-        transition: background-color 0.2s ease;
-    }
-    .stButton > button:hover {
-        background-color: #0056b3;
-    }
-    .stChatMessage {
-        border-radius: 10px;
-        padding: 10px;
-        margin-bottom: 10px;
-    }
-    .subject-badge {
-        display: inline-block;
-        background: #007bff;
-        color: white;
-        padding: 5px 15px;
-        border-radius: 15px;
-        font-size: 0.9em;
-        margin-bottom: 10px;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
+# ── Dynamic Theme & Styling ──────────────────────────────────────────────────
+if "app_theme" not in st.session_state:
+    st.session_state.app_theme = "Dark 🌙"
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.title("BSQE2 AI Assistant 📊")
-    st.markdown("### 📚 Choose a Course")
+    
+    # Visible Theme Switcher
+    st.markdown("### 🎨 Appearance")
+    selected_theme = st.radio(
+        "Choose Mode:",
+        ["Dark 🌙", "Light ☀️"],
+        index=0 if st.session_state.app_theme == "Dark 🌙" else 1,
+        horizontal=True,
+        label_visibility="collapsed",
+    )
+    st.session_state.app_theme = selected_theme
+    st.divider()
 
+    st.markdown("### 📚 Choose a Course")
     subject_names = list(SUBJECTS.keys())
     selected_subject_name = st.radio(
         "Select a course unit to study:",
@@ -128,6 +103,57 @@ with st.sidebar:
     st.caption(selected_cfg["description"])
     st.divider()
     st.write("Made by Mwesigwa Mark")
+
+# Inject Theme CSS based on user selection
+is_dark = st.session_state.app_theme == "Dark 🌙"
+bg_color = "#0E1117" if is_dark else "#FFFFFF"
+text_color = "#FAFAFA" if is_dark else "#111827"
+card_bg = "#1E232A" if is_dark else "#F3F4F6"
+input_bg = "#262730" if is_dark else "#F9FAFB"
+input_text = "#FAFAFA" if is_dark else "#111827"
+badge_bg = "#007bff" if is_dark else "#2563EB"
+
+st.markdown(
+    f"""
+    <style>
+    .stApp {{
+        background-color: {bg_color} !important;
+        color: {text_color} !important;
+    }}
+    .stChatMessage {{
+        background-color: {card_bg} !important;
+        color: {text_color} !important;
+        border-radius: 10px;
+        padding: 12px;
+        margin-bottom: 10px;
+    }}
+    .stTextInput > div > div > input {{
+        background-color: {input_bg} !important;
+        color: {input_text} !important;
+    }}
+    .subject-badge {{
+        display: inline-block;
+        background: {badge_bg};
+        color: white;
+        padding: 5px 15px;
+        border-radius: 15px;
+        font-size: 0.9em;
+        margin-bottom: 10px;
+    }}
+    .stButton > button {{
+        background-color: #007bff;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        transition: background-color 0.2s ease;
+    }}
+    .stButton > button:hover {{
+        background-color: #0056b3;
+    }}
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 
 # ── Session State — Subject Switching ────────────────────────────────────────
 if "active_subject" not in st.session_state:
