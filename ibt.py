@@ -12,6 +12,7 @@ Architecture:
 """
 
 import os
+import re
 import streamlit as st
 from dotenv import load_dotenv
 
@@ -137,6 +138,40 @@ if st.session_state.active_subject != selected_subject_name:
     st.session_state.active_subject = selected_subject_name
     st.session_state.messages = []
     st.rerun()
+
+# ── Intent Classifier (Bypass FAISS Retrieval for Casual Queries) ─────────────
+
+def is_conversational_query(text: str) -> bool:
+    """
+    Returns True if the text is a greeting, farewell, or casual pleasantry
+    that does NOT require document retrieval from FAISS.
+    """
+    cleaned = text.strip().lower()
+    
+    # Exact match for common short greetings / pleasantries
+    casual_phrases = {
+        "hi", "hello", "hey", "hey there", "good morning", "good afternoon",
+        "good evening", "howdy", "greetings", "thanks", "thank you",
+        "who created you", "who made you", "what can you do", "bye", "goodbye"
+    }
+    if cleaned in casual_phrases:
+        return True
+
+    # Pattern matching for greetings with punctuation or extra words
+    greeting_patterns = [
+        r"^(hi|hello|hey|greetings|good morning|good afternoon|good evening)[\!\?\.,\s]*",
+        r"^(thank you|thanks|bye|goodbye)[\!\?\.,\s]*",
+        r"^(who (created|made|built) (you|this app))",
+    ]
+    for pattern in greeting_patterns:
+        if re.match(pattern, cleaned):
+            # If the user asks a detailed question (>5 words), send it to retrieval
+            if len(cleaned.split()) > 5:
+                return False
+            return True
+
+    return False
+
 
 # ── Cached Resource Loaders ───────────────────────────────────────────────────
 
@@ -284,19 +319,42 @@ if user_prompt := st.chat_input(f"Ask a question about {selected_subject_name}�
         message_placeholder = st.empty()
 
         try:
-            with st.spinner("Thinking…"):
-                response = qa_chain.invoke({"input": user_prompt})
-                full_response = response.get("answer", "").strip()
+            # PATH A: Casual Greetings / Pleasantries (Bypasses FAISS Retrieval completely)
+            if is_conversational_query(user_prompt):
+                api_key = os.getenv("GOOGLE_API_KEY")
+                llm = ChatGoogleGenerativeAI(temperature=0, model="gemini-3-flash-preview", google_api_key=api_key)
+                greeting_prompt = (
+                    f"You are BSQE2 AI, an elite study assistant for Bachelor of Science in Quantitative Economics students "
+                    f"currently helping with {selected_subject_name}.\n\n"
+                    f"Respond warmly, naturally, and concisely to this user greeting: '{user_prompt}'."
+                )
+                response_stream = llm.stream(greeting_prompt)
+                full_response = st.write_stream(response_stream)
+
+            # PATH B: Academic Course Questions (Full FAISS Retrieval + High Accuracy Streaming)
+            else:
+                with st.spinner("Thinking…"):
+                    # Use LCEL streaming for real-time token rendering
+                    api_key = os.getenv("GOOGLE_API_KEY")
+                    llm = ChatGoogleGenerativeAI(temperature=0, model="gemini-3-flash-preview", google_api_key=api_key)
+                    prompt = ChatPromptTemplate.from_template(selected_cfg["prompt"])
+                    retriever = vector_store.as_retriever(
+                        search_type="similarity",
+                        search_kwargs={"k": 5},
+                    )
+
+                    docs = retriever.invoke(user_prompt)
+                    context_str = "\n\n".join(doc.page_content for doc in docs)
+
+                    formatted_prompt = prompt.format(context=context_str, input=user_prompt)
+                    response_stream = llm.stream(formatted_prompt)
+                    full_response = st.write_stream(response_stream)
 
             if not full_response:
                 full_response = (
                     "I couldn't find relevant information in the course notes. "
                     "Please try rephrasing your question."
                 )
-
-            message_placeholder.markdown(full_response)
-
-
 
         except Exception as exc:
             full_response = (
