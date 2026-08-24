@@ -101,63 +101,26 @@ THEME = {
 if "dark_mode" not in st.session_state:
     st.session_state.dark_mode = True
 
-subject_names = list(SUBJECTS.keys())
-if "active_subject" not in st.session_state:
-    st.session_state.active_subject = subject_names[0]
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-
 # ── Sidebar ───────────────────────────────────────────────────────────────────
-# NOTE: st.toggle and st.radio were replaced with st.button below.
-# Verified against Streamlit's actual frontend source: st.toggle/st.radio
-# compute their internal knob/dot colors from Streamlit's own theme engine
-# at render time — no CSS selector can reliably repaint that, and the
-# runtime theme is never actually switched (see the removed st._config
-# block). st.button renders as a real, independently-styleable element
-# (data-testid="stBaseButton-primary"/"-secondary"), so using buttons for
-# both the mode switch and the subject picker gives full, reliable control.
 with st.sidebar:
     st.title("BSQE2 AI Assistant 📊")
 
-    st.markdown("**Appearance**")
-    col_light, col_dark = st.columns(2)
-    with col_light:
-        if st.button(
-            "☀️ Light",
-            type="primary" if not st.session_state.dark_mode else "secondary",
-            use_container_width=True,
-            key="mode_light_btn",
-        ):
-            st.session_state.dark_mode = False
-            st.rerun()
-    with col_dark:
-        if st.button(
-            "🌙 Dark",
-            type="primary" if st.session_state.dark_mode else "secondary",
-            use_container_width=True,
-            key="mode_dark_btn",
-        ):
-            st.session_state.dark_mode = True
-            st.rerun()
-
-    is_dark = st.session_state.dark_mode
+    is_dark = st.toggle(
+        "🌙 Dark Mode",
+        value=st.session_state.dark_mode,
+        key="dark_mode_toggle",
+    )
+    st.session_state.dark_mode = is_dark
     st.divider()
 
     st.markdown("### 📚 Choose a Course")
-    for name in subject_names:
-        is_active = st.session_state.active_subject == name
-        if st.button(
-            f"{SUBJECTS[name]['icon']} {name}",
-            type="primary" if is_active else "secondary",
-            use_container_width=True,
-            key=f"subject_btn_{name}",
-        ):
-            if st.session_state.active_subject != name:
-                st.session_state.active_subject = name
-                st.session_state.messages = []
-                st.rerun()
+    subject_names = list(SUBJECTS.keys())
+    selected_subject_name = st.radio(
+        "Select a course unit to study:",
+        subject_names,
+        index=0,
+    )
 
-    selected_subject_name = st.session_state.active_subject
     selected_cfg = SUBJECTS[selected_subject_name]
 
     st.divider()
@@ -211,6 +174,20 @@ st.markdown(
     [data-testid="stWidgetLabel"] p {{
         color: {t["text"]} !important;
         font-weight: 500;
+    }}
+
+    /* Dark Mode toggle: verified real testid is "stCheckbox" (st.toggle
+       renders through the same component as st.checkbox, distinguished
+       only by an internal style flag — it does NOT render as "stToggle",
+       which is why an earlier version's rule never matched anything). */
+    [data-testid="stCheckbox"] label p {{
+        color: {t["text"]} !important;
+    }}
+
+    /* Subject radio group: verified real testid is "stRadio" */
+    [data-testid="stRadio"] label p,
+    [data-testid="stRadio"] [data-testid="stWidgetLabel"] p {{
+        color: {t["text"]} !important;
     }}
 
     /* Alert boxes: st.success / st.error / st.warning / st.info.
@@ -332,8 +309,15 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# (Subject switching + message reset is now handled directly by the sidebar
-# button click handlers above — no separate sync block needed.)
+# ── Session State — Subject Switching ────────────────────────────────────────
+if "active_subject" not in st.session_state:
+    st.session_state.active_subject = selected_subject_name
+    st.session_state.messages = []
+
+if st.session_state.active_subject != selected_subject_name:
+    st.session_state.active_subject = selected_subject_name
+    st.session_state.messages = []
+    st.rerun()
 
 # ── Intent Classifier (Bypass FAISS Retrieval for Casual Queries) ─────────────
 
