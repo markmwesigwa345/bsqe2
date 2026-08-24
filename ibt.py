@@ -69,23 +69,16 @@ else:
     st.stop()
 
 # ── Dynamic Theme & Styling ──────────────────────────────────────────────────
-if "app_theme" not in st.session_state:
-    st.session_state.app_theme = "Dark 🌙"
+if "dark_mode" not in st.session_state:
+    st.session_state.dark_mode = True
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.title("BSQE2 AI Assistant 📊")
     
-    # Visible Theme Switcher
-    st.markdown("### 🎨 Appearance")
-    selected_theme = st.radio(
-        "Choose Mode:",
-        ["Dark 🌙", "Light ☀️"],
-        index=0 if st.session_state.app_theme == "Dark 🌙" else 1,
-        horizontal=True,
-        label_visibility="collapsed",
-    )
-    st.session_state.app_theme = selected_theme
+    # Single Clean Switch Toggle
+    is_dark = st.toggle("🌙 Dark Mode", value=st.session_state.dark_mode)
+    st.session_state.dark_mode = is_dark
     st.divider()
 
     st.markdown("### 📚 Choose a Course")
@@ -104,51 +97,69 @@ with st.sidebar:
     st.divider()
     st.write("Made by Mwesigwa Mark")
 
-# Inject Theme CSS based on user selection
-is_dark = st.session_state.app_theme == "Dark 🌙"
+# Comprehensive Full-Screen CSS Overrides
 bg_color = "#0E1117" if is_dark else "#FFFFFF"
-text_color = "#FAFAFA" if is_dark else "#111827"
-card_bg = "#1E232A" if is_dark else "#F3F4F6"
-input_bg = "#262730" if is_dark else "#F9FAFB"
-input_text = "#FAFAFA" if is_dark else "#111827"
+sidebar_bg = "#161B22" if is_dark else "#F8FAFC"
+text_color = "#FAFAFA" if is_dark else "#0F172A"
+card_bg = "#1E232A" if is_dark else "#F1F5F9"
+input_bg = "#262730" if is_dark else "#FFFFFF"
+input_text = "#FAFAFA" if is_dark else "#0F172A"
 badge_bg = "#007bff" if is_dark else "#2563EB"
+border_color = "#30363D" if is_dark else "#E2E8F0"
 
 st.markdown(
     f"""
     <style>
-    .stApp {{
+    /* Full viewport background & typography */
+    .stApp, [data-testid="stHeader"], [data-testid="stToolbar"] {{
         background-color: {bg_color} !important;
         color: {text_color} !important;
     }}
-    .stChatMessage {{
+    
+    /* Full sidebar background */
+    section[data-testid="stSidebar"], section[data-testid="stSidebar"] > div {{
+        background-color: {sidebar_bg} !important;
+        color: {text_color} !important;
+    }}
+    
+    /* All headers, markdown, labels & text */
+    h1, h2, h3, h4, h5, h6, p, span, label, .stMarkdown {{
+        color: {text_color} !important;
+    }}
+
+    /* Chat message cards */
+    [data-testid="stChatMessage"] {{
         background-color: {card_bg} !important;
         color: {text_color} !important;
-        border-radius: 10px;
-        padding: 12px;
-        margin-bottom: 10px;
+        border: 1px solid {border_color};
+        border-radius: 12px;
+        padding: 12px 16px;
+        margin-bottom: 12px;
     }}
-    .stTextInput > div > div > input {{
+
+    /* Chat Input Bar */
+    [data-testid="stChatInput"], [data-testid="stChatInput"] textarea {{
         background-color: {input_bg} !important;
         color: {input_text} !important;
+        border: 1px solid {border_color} !important;
+        border-radius: 10px;
     }}
+
+    /* Subject Badge */
     .subject-badge {{
         display: inline-block;
         background: {badge_bg};
-        color: white;
-        padding: 5px 15px;
-        border-radius: 15px;
+        color: white !important;
+        padding: 6px 18px;
+        border-radius: 20px;
         font-size: 0.9em;
-        margin-bottom: 10px;
+        font-weight: 500;
+        margin-bottom: 12px;
     }}
-    .stButton > button {{
-        background-color: #007bff;
-        color: white;
-        border: none;
-        border-radius: 6px;
-        transition: background-color 0.2s ease;
-    }}
-    .stButton > button:hover {{
-        background-color: #0056b3;
+
+    /* Dividers */
+    hr {{
+        border-color: {border_color} !important;
     }}
     </style>
     """,
