@@ -84,18 +84,6 @@ THEME = {
         "border":       "#30363D",
         "accent":       "#2563EB",
         "accent_text":  "#FFFFFF",
-        "success_bg":   "#132A1D",
-        "success_text": "#4ADE80",
-        "success_bd":   "#1F5C36",
-        "error_bg":     "#2A1414",
-        "error_text":   "#F87171",
-        "error_bd":     "#5C1F1F",
-        "warning_bg":   "#2A2414",
-        "warning_text": "#FBBF24",
-        "warning_bd":   "#5C4E1F",
-        "info_bg":      "#13202A",
-        "info_text":    "#60A5FA",
-        "info_bd":      "#1F3F5C",
     },
     "light": {
         "bg":           "#FFFFFF",
@@ -107,44 +95,69 @@ THEME = {
         "border":       "#CBD5E1",
         "accent":       "#2563EB",
         "accent_text":  "#FFFFFF",
-        "success_bg":   "#ECFDF3",
-        "success_text": "#15803D",
-        "success_bd":   "#BBF7D0",
-        "error_bg":     "#FEF2F2",
-        "error_text":   "#B91C1C",
-        "error_bd":     "#FECACA",
-        "warning_bg":   "#FFFBEB",
-        "warning_text": "#B45309",
-        "warning_bd":   "#FDE68A",
-        "info_bg":      "#EFF6FF",
-        "info_text":    "#1D4ED8",
-        "info_bd":      "#BFDBFE",
     },
 }
 
 if "dark_mode" not in st.session_state:
     st.session_state.dark_mode = True
 
+subject_names = list(SUBJECTS.keys())
+if "active_subject" not in st.session_state:
+    st.session_state.active_subject = subject_names[0]
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
 # ── Sidebar ───────────────────────────────────────────────────────────────────
+# NOTE: st.toggle and st.radio were replaced with st.button below.
+# Verified against Streamlit's actual frontend source: st.toggle/st.radio
+# compute their internal knob/dot colors from Streamlit's own theme engine
+# at render time — no CSS selector can reliably repaint that, and the
+# runtime theme is never actually switched (see the removed st._config
+# block). st.button renders as a real, independently-styleable element
+# (data-testid="stBaseButton-primary"/"-secondary"), so using buttons for
+# both the mode switch and the subject picker gives full, reliable control.
 with st.sidebar:
     st.title("BSQE2 AI Assistant 📊")
 
-    is_dark = st.toggle(
-        "🌙 Dark Mode",
-        value=st.session_state.dark_mode,
-        key="dark_mode_toggle",
-    )
-    st.session_state.dark_mode = is_dark
+    st.markdown("**Appearance**")
+    col_light, col_dark = st.columns(2)
+    with col_light:
+        if st.button(
+            "☀️ Light",
+            type="primary" if not st.session_state.dark_mode else "secondary",
+            use_container_width=True,
+            key="mode_light_btn",
+        ):
+            st.session_state.dark_mode = False
+            st.rerun()
+    with col_dark:
+        if st.button(
+            "🌙 Dark",
+            type="primary" if st.session_state.dark_mode else "secondary",
+            use_container_width=True,
+            key="mode_dark_btn",
+        ):
+            st.session_state.dark_mode = True
+            st.rerun()
+
+    is_dark = st.session_state.dark_mode
     st.divider()
 
     st.markdown("### 📚 Choose a Course")
-    subject_names = list(SUBJECTS.keys())
-    selected_subject_name = st.radio(
-        "Select a course unit to study:",
-        subject_names,
-        index=0,
-    )
+    for name in subject_names:
+        is_active = st.session_state.active_subject == name
+        if st.button(
+            f"{SUBJECTS[name]['icon']} {name}",
+            type="primary" if is_active else "secondary",
+            use_container_width=True,
+            key=f"subject_btn_{name}",
+        ):
+            if st.session_state.active_subject != name:
+                st.session_state.active_subject = name
+                st.session_state.messages = []
+                st.rerun()
 
+    selected_subject_name = st.session_state.active_subject
     selected_cfg = SUBJECTS[selected_subject_name]
 
     st.divider()
@@ -194,39 +207,27 @@ st.markdown(
         color: {t["text_muted"]} !important;
     }}
 
-    /* Widget labels (toggle label, radio group label) */
+    /* Widget labels */
     [data-testid="stWidgetLabel"] p {{
         color: {t["text"]} !important;
         font-weight: 500;
     }}
 
-    /* Toggle + Radio: style the real <input> via accent-color (native CSS,
-       not dependent on Streamlit's internal markup) */
-    [data-testid="stToggle"] input,
-    [data-testid="stRadio"] input {{
-        accent-color: {t["accent"]};
-    }}
-    [data-testid="stRadio"] label p {{
-        color: {t["text"]} !important;
-    }}
-
     /* Alert boxes: st.success / st.error / st.warning / st.info.
-       One uniform, legible treatment — background+text set together.
-       (Per-type coloring was dropped: it relied on unverified selectors
-       and produced invisible text when they failed to match.) */
-    [data-testid="stAlertContainer"] {{
+       Verified against Streamlit's actual frontend source: the outer
+       [data-testid="stAlert"] div is an unstyled flex wrapper — the real
+       colored box is its direct child <div>. Targeting the wrapper alone
+       (as a prior version did, using the wrong testid "stAlertContainer")
+       has no visible effect since the child paints over it. */
+    [data-testid="stAlert"] > div {{
         background-color: {t["card"]} !important;
         border: 1px solid {t["border"]} !important;
         border-radius: 10px !important;
     }}
-    [data-testid="stAlertContainer"],
-    [data-testid="stAlertContainer"] p,
-    [data-testid="stAlertContainer"] span,
-    [data-testid="stAlertContainer"] li,
-    [data-testid="stAlertContainer"] strong {{
+    [data-testid="stAlert"] * {{
         color: {t["text"]} !important;
     }}
-    [data-testid="stAlertContainer"] svg {{
+    [data-testid="stAlert"] svg {{
         fill: {t["accent"]} !important;
     }}
 
@@ -281,12 +282,28 @@ st.markdown(
         fill: {t["accent_text"]} !important;
     }}
 
-    /* Generic buttons: background + text set together */
-    .stButton button {{
+    /* Buttons: verified real testids "stBaseButton-secondary" / "-primary"
+       (used for the Light/Dark switch and the subject picker). Precise
+       and independently styleable — unlike st.toggle/st.radio, these do
+       not depend on Streamlit's own unswitched internal theme. */
+    [data-testid="stBaseButton-secondary"] {{
         background-color: {t["input_bg"]} !important;
         color: {t["text"]} !important;
         border: 1px solid {t["border"]} !important;
         border-radius: 8px !important;
+    }}
+    [data-testid="stBaseButton-secondary"]:hover {{
+        border-color: {t["accent"]} !important;
+        color: {t["accent"]} !important;
+    }}
+    [data-testid="stBaseButton-primary"] {{
+        background-color: {t["accent"]} !important;
+        color: {t["accent_text"]} !important;
+        border: 1px solid {t["accent"]} !important;
+        border-radius: 8px !important;
+    }}
+    [data-testid="stBaseButton-primary"] p {{
+        color: {t["accent_text"]} !important;
     }}
 
     /* Inline code / markdown code blocks outside chat */
@@ -315,15 +332,8 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# ── Session State — Subject Switching ────────────────────────────────────────
-if "active_subject" not in st.session_state:
-    st.session_state.active_subject = selected_subject_name
-    st.session_state.messages = []
-
-if st.session_state.active_subject != selected_subject_name:
-    st.session_state.active_subject = selected_subject_name
-    st.session_state.messages = []
-    st.rerun()
+# (Subject switching + message reset is now handled directly by the sidebar
+# button click handlers above — no separate sync block needed.)
 
 # ── Intent Classifier (Bypass FAISS Retrieval for Casual Queries) ─────────────
 
