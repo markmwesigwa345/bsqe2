@@ -133,25 +133,24 @@ with st.sidebar:
 t = THEME["dark" if is_dark else "light"]
 
 # ── Global CSS ──────────────────────────────────────────────────────────────
-# Strategy: background + text color are ALWAYS set together, in the same rule,
-# for every "boxed" component. The base `.stApp` rule only sets an *inherited*
-# text color (no blanket per-element !important), so nested elements that need
-# their own contrast (accent buttons, badges) aren't fought by a global rule.
-# No selectors that guess at Streamlit's internal DOM structure (icons,
-# baseweb notification "kind" attributes, nested span order) are used —
-# only documented/stable data-testid hooks and real HTML form elements.
 st.markdown(
     f"""
     <style>
-    /* Base app: background + inherited text color */
+    /* Base app: background + text color (forced) */
     .stApp {{
         background-color: {t["bg"]} !important;
+        color: {t["text"]} !important;
+    }}
+    .stApp * {{
         color: {t["text"]};
     }}
 
-    /* Sidebar: its own background + inherited text color */
+    /* Sidebar: its own background + text color (forced) */
     section[data-testid="stSidebar"] {{
         background-color: {t["sidebar_bg"]} !important;
+        color: {t["text"]} !important;
+    }}
+    section[data-testid="stSidebar"] * {{
         color: {t["text"]};
     }}
 
@@ -176,12 +175,13 @@ st.markdown(
         font-weight: 500;
     }}
 
-    /* Dark Mode toggle: verified real testid is "stCheckbox" (st.toggle
-       renders through the same component as st.checkbox, distinguished
-       only by an internal style flag — it does NOT render as "stToggle",
-       which is why an earlier version's rule never matched anything). */
+    /* Dark Mode toggle: verified real testid is "stCheckbox" */
     [data-testid="stCheckbox"] label p {{
         color: {t["text"]} !important;
+    }}
+    [data-testid="stCheckbox"] label div[role="checkbox"] {{
+        background-color: {t["input_bg"]} !important;
+        border-color: {t["border"]} !important;
     }}
 
     /* Subject radio group: verified real testid is "stRadio" */
@@ -189,13 +189,12 @@ st.markdown(
     [data-testid="stRadio"] [data-testid="stWidgetLabel"] p {{
         color: {t["text"]} !important;
     }}
+    [data-testid="stRadio"] label div:first-child {{
+        background-color: {t["input_bg"]} !important;
+        border-color: {t["border"]} !important;
+    }}
 
-    /* Alert boxes: st.success / st.error / st.warning / st.info.
-       Verified against Streamlit's actual frontend source: the outer
-       [data-testid="stAlert"] div is an unstyled flex wrapper — the real
-       colored box is its direct child <div>. Targeting the wrapper alone
-       (as a prior version did, using the wrong testid "stAlertContainer")
-       has no visible effect since the child paints over it. */
+    /* Alert boxes: st.success / st.error / st.warning / st.info */
     [data-testid="stAlert"] > div {{
         background-color: {t["card"]} !important;
         border: 1px solid {t["border"]} !important;
@@ -249,8 +248,7 @@ st.markdown(
         opacity: 1 !important;
     }}
 
-    /* Chat submit button: deliberately its OWN color pair (accent bg,
-       always-white text) — must not inherit the base app text color */
+    /* Chat submit button: deliberately its OWN color pair */
     [data-testid="stChatInputSubmitButton"] {{
         background-color: {t["accent"]} !important;
         border-radius: 8px !important;
@@ -259,10 +257,7 @@ st.markdown(
         fill: {t["accent_text"]} !important;
     }}
 
-    /* Buttons: verified real testids "stBaseButton-secondary" / "-primary"
-       (used for the Light/Dark switch and the subject picker). Precise
-       and independently styleable — unlike st.toggle/st.radio, these do
-       not depend on Streamlit's own unswitched internal theme. */
+    /* Buttons: verified real testids "stBaseButton-secondary" / "-primary" */
     [data-testid="stBaseButton-secondary"] {{
         background-color: {t["input_bg"]} !important;
         color: {t["text"]} !important;
@@ -299,6 +294,32 @@ st.markdown(
         font-size: 0.9em;
         font-weight: 500;
         margin-bottom: 12px;
+    }}
+
+    /* Headings */
+    h1, h2, h3, h4, h5, h6 {{
+        color: {t["text"]} !important;
+    }}
+
+    /* Selectbox */
+    [data-testid="stSelectbox"] div[data-baseweb="select"] > div {{
+        background-color: {t["input_bg"]} !important;
+        color: {t["text"]} !important;
+        border-color: {t["border"]} !important;
+    }}
+
+    /* Expander */
+    [data-testid="stExpander"] {{
+        background-color: {t["card"]} !important;
+        border: 1px solid {t["border"]} !important;
+    }}
+    [data-testid="stExpander"] * {{
+        color: {t["text"]} !important;
+    }}
+
+    /* Dataframe */
+    [data-testid="stDataFrame"] {{
+        background-color: {t["card"]} !important;
     }}
 
     hr {{
