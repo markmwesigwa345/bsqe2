@@ -147,6 +147,10 @@ def is_conversational_query(text: str) -> bool:
     that does NOT require document retrieval from FAISS.
     """
     cleaned = text.strip().lower()
+
+    # Never treat summarization requests as casual greetings
+    if any(kw in cleaned for kw in ["summarize", "summary", "brief", "recap", "short version", "bullet points"]):
+        return False
     
     # Exact match for common short greetings / pleasantries
     casual_phrases = {
@@ -171,6 +175,17 @@ def is_conversational_query(text: str) -> bool:
             return True
 
     return False
+
+
+def is_summarization_request(text: str) -> bool:
+    """Detects if the user prompt is asking to summarize a previous answer or topic."""
+    cleaned = text.strip().lower()
+    keywords = [
+        "summarize", "summary", "briefly explain", "in short", 
+        "bullet points", "give me a summary", "key takeaways", "recap",
+        "shorten this", "summarise"
+    ]
+    return any(kw in cleaned for kw in keywords)
 
 
 # ── Cached Resource Loaders ───────────────────────────────────────────────────
@@ -331,10 +346,46 @@ if user_prompt := st.chat_input(f"Ask a question about {selected_subject_name}�
                 response_stream = llm.stream(greeting_prompt)
                 full_response = st.write_stream(response_stream)
 
-            # PATH B: Academic Course Questions (Full FAISS Retrieval + High Accuracy Streaming)
+            # PATH B: Explicit User Summarization Request (Summarizes previous answer if available)
+            elif is_summarization_request(user_prompt):
+                api_key = os.getenv("GOOGLE_API_KEY")
+                llm = ChatGoogleGenerativeAI(temperature=0, model="gemini-3-flash-preview", google_api_key=api_key)
+
+                # Find the last assistant message in chat history
+                last_assistant_msg = None
+                for msg in reversed(st.session_state.messages[:-1]):
+                    if msg["role"] == "assistant":
+                        last_assistant_msg = msg["content"]
+                        break
+
+                if last_assistant_msg:
+                    summary_prompt = (
+                        f"You are BSQE2 AI. Summarize the following answer clearly into concise bullet points, "
+                        f"highlighting key definitions and main takeaways:\n\n{last_assistant_msg}"
+                    )
+                    response_stream = llm.stream(summary_prompt)
+                    full_response = st.write_stream(response_stream)
+                else:
+                    # Fallback if no prior answer exists: treat as standard RAG query with summary instruction
+                    with st.spinner("Thinking…"):
+                        subject_prompt = (
+                            selected_cfg["prompt"]
+                            + "\n\nProvide a concise bullet-point summary for this topic."
+                        )
+                        prompt = ChatPromptTemplate.from_template(subject_prompt)
+                        retriever = vector_store.as_retriever(
+                            search_type="similarity",
+                            search_kwargs={"k": 5},
+                        )
+                        docs = retriever.invoke(user_prompt)
+                        context_str = "\n\n".join(doc.page_content for doc in docs)
+                        formatted_prompt = prompt.format(context=context_str, input=user_prompt)
+                        response_stream = llm.stream(formatted_prompt)
+                        full_response = st.write_stream(response_stream)
+
+            # PATH C: Standard Academic Course Questions (Full, Detailed, Step-by-Step Response by default)
             else:
                 with st.spinner("Thinking…"):
-                    # Use LCEL streaming for real-time token rendering
                     api_key = os.getenv("GOOGLE_API_KEY")
                     llm = ChatGoogleGenerativeAI(temperature=0, model="gemini-3-flash-preview", google_api_key=api_key)
                     prompt = ChatPromptTemplate.from_template(selected_cfg["prompt"])
