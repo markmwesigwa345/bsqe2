@@ -68,16 +68,72 @@ else:
     )
     st.stop()
 
-# ── Dynamic Theme & Styling ──────────────────────────────────────────────────
+# ── Theme Definition (single source of truth) ─────────────────────────────────
+# Every color used anywhere in the app is pulled from this dict, keyed by mode.
+# This replaces the old scattered variables + the non-functional st._config calls
+# (st._config.set_option is a private/internal API that does not reliably
+# re-theme an already-running Streamlit session, so it has been removed).
+THEME = {
+    "dark": {
+        "bg":           "#0E1117",
+        "sidebar_bg":   "#161B22",
+        "text":         "#FAFAFA",
+        "text_muted":   "#9CA3AF",
+        "card":         "#1E232A",
+        "input_bg":     "#262730",
+        "border":       "#30363D",
+        "accent":       "#2563EB",
+        "accent_text":  "#FFFFFF",
+        "success_bg":   "#132A1D",
+        "success_text": "#4ADE80",
+        "success_bd":   "#1F5C36",
+        "error_bg":     "#2A1414",
+        "error_text":   "#F87171",
+        "error_bd":     "#5C1F1F",
+        "warning_bg":   "#2A2414",
+        "warning_text": "#FBBF24",
+        "warning_bd":   "#5C4E1F",
+        "info_bg":      "#13202A",
+        "info_text":    "#60A5FA",
+        "info_bd":      "#1F3F5C",
+    },
+    "light": {
+        "bg":           "#FFFFFF",
+        "sidebar_bg":   "#F8FAFC",
+        "text":         "#0F172A",
+        "text_muted":   "#64748B",
+        "card":         "#F1F5F9",
+        "input_bg":     "#FFFFFF",
+        "border":       "#CBD5E1",
+        "accent":       "#2563EB",
+        "accent_text":  "#FFFFFF",
+        "success_bg":   "#ECFDF3",
+        "success_text": "#15803D",
+        "success_bd":   "#BBF7D0",
+        "error_bg":     "#FEF2F2",
+        "error_text":   "#B91C1C",
+        "error_bd":     "#FECACA",
+        "warning_bg":   "#FFFBEB",
+        "warning_text": "#B45309",
+        "warning_bd":   "#FDE68A",
+        "info_bg":      "#EFF6FF",
+        "info_text":    "#1D4ED8",
+        "info_bd":      "#BFDBFE",
+    },
+}
+
 if "dark_mode" not in st.session_state:
     st.session_state.dark_mode = True
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.title("BSQE2 AI Assistant 📊")
-    
-    # Single Clean Switch Toggle
-    is_dark = st.toggle("🌙 Dark Mode", value=st.session_state.dark_mode)
+
+    is_dark = st.toggle(
+        "🌙 Dark Mode",
+        value=st.session_state.dark_mode,
+        key="dark_mode_toggle",
+    )
     st.session_state.dark_mode = is_dark
     st.divider()
 
@@ -97,99 +153,170 @@ with st.sidebar:
     st.divider()
     st.write("Made by Mwesigwa Mark")
 
-# Apply Streamlit's Native Theme Options dynamically
-try:
-    st._config.set_option("theme.base", "dark" if is_dark else "light")
-    st._config.set_option("theme.backgroundColor", "#0E1117" if is_dark else "#FFFFFF")
-    st._config.set_option("theme.secondaryBackgroundColor", "#161B22" if is_dark else "#F1F5F9")
-    st._config.set_option("theme.textColor", "#FAFAFA" if is_dark else "#0F172A")
-    st._config.set_option("theme.primaryColor", "#2563EB")
-except Exception:
-    pass
+# Resolve active theme dict for this run
+t = THEME["dark" if is_dark else "light"]
 
-# Precise CSS Overrides for Whole Page Coverage without hiding native controls
-bg_color = "#0E1117" if is_dark else "#FFFFFF"
-sidebar_bg = "#161B22" if is_dark else "#F8FAFC"
-text_color = "#FAFAFA" if is_dark else "#0F172A"
-card_bg = "#1E232A" if is_dark else "#F1F5F9"
-input_bg = "#262730" if is_dark else "#FFFFFF"
-border_color = "#30363D" if is_dark else "#CBD5E1"
-badge_bg = "#007bff" if is_dark else "#2563EB"
-icon_color = "#FAFAFA" if is_dark else "#0F172A"
-
+# ── Global CSS (single generated block — every surface reads from `t`) ────────
 st.markdown(
     f"""
     <style>
     /* Main App & Sidebar Backgrounds */
     .stApp {{
-        background-color: {bg_color} !important;
+        background-color: {t["bg"]} !important;
     }}
     section[data-testid="stSidebar"] {{
-        background-color: {sidebar_bg} !important;
+        background-color: {t["sidebar_bg"]} !important;
     }}
-    
+    section[data-testid="stSidebar"] * {{
+        color: {t["text"]} !important;
+    }}
+
     /* Top Header & Action Menu Bar Icons (Settings, Manage App, Hamburger) */
     header[data-testid="stHeader"], [data-testid="stHeader"] * {{
         background-color: transparent !important;
     }}
-    header[data-testid="stHeader"] button, header[data-testid="stHeader"] svg, [data-testid="stToolbar"] button, [data-testid="stToolbar"] svg {{
-        fill: {icon_color} !important;
-        color: {icon_color} !important;
+    header[data-testid="stHeader"] button, header[data-testid="stHeader"] svg,
+    [data-testid="stToolbar"] button, [data-testid="stToolbar"] svg {{
+        fill: {t["text"]} !important;
+        color: {t["text"]} !important;
         opacity: 1 !important;
         visibility: visible !important;
     }}
 
     /* Main Typography */
-    .stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp h5, .stApp h6, .stApp p, .stApp label {{
-        color: {text_color} !important;
+    .stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp h5, .stApp h6,
+    .stApp p, .stApp label, .stApp span, .stApp li {{
+        color: {t["text"]} !important;
+    }}
+    .stCaption, [data-testid="stCaptionContainer"] {{
+        color: {t["text_muted"]} !important;
     }}
 
-    /* Toggle Switch Label & Knob Visibility */
+    /* Widget Labels */
     [data-testid="stWidgetLabel"] p {{
-        color: {text_color} !important;
+        color: {t["text"]} !important;
         font-weight: 500;
+    }}
+
+    /* Toggle Switch (Dark Mode control itself) */
+    [data-testid="stToggle"] label div[data-baseweb="checkbox"] div {{
+        background-color: {t["input_bg"]} !important;
+        border-color: {t["border"]} !important;
+    }}
+    [data-testid="stToggle"] input:checked ~ div {{
+        background-color: {t["accent"]} !important;
+    }}
+
+    /* Radio Buttons (Subject picker) */
+    [data-testid="stRadio"] label {{
+        color: {t["text"]} !important;
+    }}
+    [data-testid="stRadio"] div[role="radiogroup"] label span:first-child {{
+        background-color: {t["input_bg"]} !important;
+        border-color: {t["border"]} !important;
+    }}
+    [data-testid="stRadio"] div[role="radiogroup"] label[data-checked="true"] span:first-child {{
+        border-color: {t["accent"]} !important;
+    }}
+
+    /* Alert Boxes: st.success / st.error / st.warning / st.info */
+    [data-testid="stAlertContainer"], div[data-testid="stAlert"] {{
+        border-radius: 10px !important;
+        border-width: 1px !important;
+        border-style: solid !important;
+    }}
+    div[data-testid="stAlert"] p, [data-testid="stAlertContainer"] p,
+    div[data-testid="stAlert"] * {{
+        color: inherit !important;
+    }}
+    div[data-baseweb="notification"][kind="positive"],
+    [data-testid="stAlertContainer"]:has(svg[data-icon="check-circle-fill"]) {{
+        background-color: {t["success_bg"]} !important;
+        border-color: {t["success_bd"]} !important;
+        color: {t["success_text"]} !important;
+    }}
+    div[data-baseweb="notification"][kind="negative"],
+    [data-testid="stAlertContainer"]:has(svg[data-icon="x-circle-fill"]) {{
+        background-color: {t["error_bg"]} !important;
+        border-color: {t["error_bd"]} !important;
+        color: {t["error_text"]} !important;
+    }}
+    div[data-baseweb="notification"][kind="warning"],
+    [data-testid="stAlertContainer"]:has(svg[data-icon="exclamation-triangle-fill"]) {{
+        background-color: {t["warning_bg"]} !important;
+        border-color: {t["warning_bd"]} !important;
+        color: {t["warning_text"]} !important;
+    }}
+    div[data-baseweb="notification"][kind="info"],
+    [data-testid="stAlertContainer"]:has(svg[data-icon="info-circle-fill"]) {{
+        background-color: {t["info_bg"]} !important;
+        border-color: {t["info_bd"]} !important;
+        color: {t["info_text"]} !important;
+    }}
+
+    /* Spinner text */
+    [data-testid="stSpinner"] p, [data-testid="stSpinner"] div {{
+        color: {t["text"]} !important;
     }}
 
     /* Chat Message Cards */
     [data-testid="stChatMessage"] {{
-        background-color: {card_bg} !important;
-        color: {text_color} !important;
-        border: 1px solid {border_color} !important;
+        background-color: {t["card"]} !important;
+        color: {t["text"]} !important;
+        border: 1px solid {t["border"]} !important;
         border-radius: 12px;
         padding: 12px 16px;
         margin-bottom: 12px;
     }}
-    [data-testid="stChatMessage"] p {{
-        color: {text_color} !important;
+    [data-testid="stChatMessage"] p, [data-testid="stChatMessage"] li,
+    [data-testid="stChatMessage"] code {{
+        color: {t["text"]} !important;
     }}
 
     /* Bottom Chat Input Prompt Section & Submit Send Button */
     [data-testid="stChatInput"] {{
-        background-color: {input_bg} !important;
-        border: 1px solid {border_color} !important;
+        background-color: {t["input_bg"]} !important;
+        border: 1px solid {t["border"]} !important;
         border-radius: 12px !important;
     }}
     [data-testid="stChatInput"] textarea {{
-        color: {text_color} !important;
+        color: {t["text"]} !important;
         background-color: transparent !important;
     }}
+    [data-testid="stChatInput"] textarea::placeholder {{
+        color: {t["text_muted"]} !important;
+    }}
     [data-testid="stChatInputSubmitButton"], [data-testid="stChatInput"] button {{
-        background-color: #2563EB !important;
-        color: #FFFFFF !important;
+        background-color: {t["accent"]} !important;
+        color: {t["accent_text"]} !important;
         border-radius: 8px !important;
         opacity: 1 !important;
         visibility: visible !important;
     }}
     [data-testid="stChatInputSubmitButton"] svg, [data-testid="stChatInput"] button svg {{
-        fill: #FFFFFF !important;
-        color: #FFFFFF !important;
+        fill: {t["accent_text"]} !important;
+        color: {t["accent_text"]} !important;
+    }}
+
+    /* Generic buttons (fallback so nothing is left unstyled) */
+    .stButton button {{
+        background-color: {t["input_bg"]} !important;
+        color: {t["text"]} !important;
+        border: 1px solid {t["border"]} !important;
+        border-radius: 8px !important;
+    }}
+
+    /* Inline code / markdown code blocks */
+    .stMarkdown code, .stApp code {{
+        background-color: {t["input_bg"]} !important;
+        color: {t["text"]} !important;
     }}
 
     /* Subject Badge */
     .subject-badge {{
         display: inline-block;
-        background: {badge_bg};
-        color: white !important;
+        background: {t["accent"]};
+        color: {t["accent_text"]} !important;
         padding: 6px 18px;
         border-radius: 20px;
         font-size: 0.9em;
@@ -199,7 +326,7 @@ st.markdown(
 
     /* Dividers */
     hr {{
-        border-color: {border_color} !important;
+        border-color: {t["border"]} !important;
     }}
     </style>
     """,
@@ -228,7 +355,7 @@ def is_conversational_query(text: str) -> bool:
     # Never treat summarization requests as casual greetings
     if any(kw in cleaned for kw in ["summarize", "summary", "brief", "recap", "short version", "bullet points"]):
         return False
-    
+
     # Exact match for common short greetings / pleasantries
     casual_phrases = {
         "hi", "hello", "hey", "hey there", "good morning", "good afternoon",
@@ -258,7 +385,7 @@ def is_summarization_request(text: str) -> bool:
     """Detects if the user prompt is asking to summarize a previous answer or topic."""
     cleaned = text.strip().lower()
     keywords = [
-        "summarize", "summary", "briefly explain", "in short", 
+        "summarize", "summary", "briefly explain", "in short",
         "bullet points", "give me a summary", "key takeaways", "recap",
         "shorten this", "summarise"
     ]
