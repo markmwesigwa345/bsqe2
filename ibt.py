@@ -128,13 +128,15 @@ st.markdown(
         background-color: {sidebar_bg} !important;
     }}
     
-    /* Top Header & Action Menu Bar */
-    [data-testid="stHeader"] {{
-        background-color: {bg_color} !important;
+    /* Top Header & Action Menu Bar Icons (Settings, Manage App, Hamburger) */
+    header[data-testid="stHeader"], [data-testid="stHeader"] * {{
+        background-color: transparent !important;
     }}
-    [data-testid="stHeader"] svg, [data-testid="stHeader"] button, [data-testid="stToolbar"] button {{
+    header[data-testid="stHeader"] button, header[data-testid="stHeader"] svg, [data-testid="stToolbar"] button, [data-testid="stToolbar"] svg {{
         fill: {icon_color} !important;
         color: {icon_color} !important;
+        opacity: 1 !important;
+        visibility: visible !important;
     }}
 
     /* Main Typography */
@@ -161,7 +163,7 @@ st.markdown(
         color: {text_color} !important;
     }}
 
-    /* Bottom Chat Input Prompt Section */
+    /* Bottom Chat Input Prompt Section & Submit Send Button */
     [data-testid="stChatInput"] {{
         background-color: {input_bg} !important;
         border: 1px solid {border_color} !important;
@@ -171,12 +173,16 @@ st.markdown(
         color: {text_color} !important;
         background-color: transparent !important;
     }}
-    [data-testid="stChatInput"] button {{
-        color: {icon_color} !important;
-        fill: {icon_color} !important;
+    [data-testid="stChatInputSubmitButton"], [data-testid="stChatInput"] button {{
+        background-color: #2563EB !important;
+        color: #FFFFFF !important;
+        border-radius: 8px !important;
+        opacity: 1 !important;
+        visibility: visible !important;
     }}
-    [data-testid="stChatInput"] button svg {{
-        fill: {icon_color} !important;
+    [data-testid="stChatInputSubmitButton"] svg, [data-testid="stChatInput"] button svg {{
+        fill: #FFFFFF !important;
+        color: #FFFFFF !important;
     }}
 
     /* Subject Badge */
