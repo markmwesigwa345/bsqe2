@@ -156,22 +156,30 @@ with st.sidebar:
 # Resolve active theme dict for this run
 t = THEME["dark" if is_dark else "light"]
 
-# ── Global CSS (single generated block — every surface reads from `t`) ────────
+# ── Global CSS ──────────────────────────────────────────────────────────────
+# Strategy: background + text color are ALWAYS set together, in the same rule,
+# for every "boxed" component. The base `.stApp` rule only sets an *inherited*
+# text color (no blanket per-element !important), so nested elements that need
+# their own contrast (accent buttons, badges) aren't fought by a global rule.
+# No selectors that guess at Streamlit's internal DOM structure (icons,
+# baseweb notification "kind" attributes, nested span order) are used —
+# only documented/stable data-testid hooks and real HTML form elements.
 st.markdown(
     f"""
     <style>
-    /* Main App & Sidebar Backgrounds */
+    /* Base app: background + inherited text color */
     .stApp {{
         background-color: {t["bg"]} !important;
-    }}
-    section[data-testid="stSidebar"] {{
-        background-color: {t["sidebar_bg"]} !important;
-    }}
-    section[data-testid="stSidebar"] * {{
-        color: {t["text"]} !important;
+        color: {t["text"]};
     }}
 
-    /* Top Header & Action Menu Bar Icons (Settings, Manage App, Hamburger) */
+    /* Sidebar: its own background + inherited text color */
+    section[data-testid="stSidebar"] {{
+        background-color: {t["sidebar_bg"]} !important;
+        color: {t["text"]};
+    }}
+
+    /* Header / toolbar icons */
     header[data-testid="stHeader"], [data-testid="stHeader"] * {{
         background-color: transparent !important;
     }}
@@ -179,126 +187,101 @@ st.markdown(
     [data-testid="stToolbar"] button, [data-testid="stToolbar"] svg {{
         fill: {t["text"]} !important;
         color: {t["text"]} !important;
-        opacity: 1 !important;
-        visibility: visible !important;
     }}
 
-    /* Main Typography */
-    .stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp h5, .stApp h6,
-    .stApp p, .stApp label, .stApp span, .stApp li {{
-        color: {t["text"]} !important;
-    }}
-    .stCaption, [data-testid="stCaptionContainer"] {{
+    /* Muted caption text (sidebar "About" description) */
+    [data-testid="stCaptionContainer"], .stCaption {{
         color: {t["text_muted"]} !important;
     }}
 
-    /* Widget Labels */
+    /* Widget labels (toggle label, radio group label) */
     [data-testid="stWidgetLabel"] p {{
         color: {t["text"]} !important;
         font-weight: 500;
     }}
 
-    /* Toggle Switch (Dark Mode control itself) */
-    [data-testid="stToggle"] label div[data-baseweb="checkbox"] div {{
-        background-color: {t["input_bg"]} !important;
-        border-color: {t["border"]} !important;
+    /* Toggle + Radio: style the real <input> via accent-color (native CSS,
+       not dependent on Streamlit's internal markup) */
+    [data-testid="stToggle"] input,
+    [data-testid="stRadio"] input {{
+        accent-color: {t["accent"]};
     }}
-    [data-testid="stToggle"] input:checked ~ div {{
-        background-color: {t["accent"]} !important;
-    }}
-
-    /* Radio Buttons (Subject picker) */
-    [data-testid="stRadio"] label {{
+    [data-testid="stRadio"] label p {{
         color: {t["text"]} !important;
     }}
-    [data-testid="stRadio"] div[role="radiogroup"] label span:first-child {{
-        background-color: {t["input_bg"]} !important;
-        border-color: {t["border"]} !important;
-    }}
-    [data-testid="stRadio"] div[role="radiogroup"] label[data-checked="true"] span:first-child {{
-        border-color: {t["accent"]} !important;
-    }}
 
-    /* Alert Boxes: st.success / st.error / st.warning / st.info */
-    [data-testid="stAlertContainer"], div[data-testid="stAlert"] {{
+    /* Alert boxes: st.success / st.error / st.warning / st.info.
+       One uniform, legible treatment — background+text set together.
+       (Per-type coloring was dropped: it relied on unverified selectors
+       and produced invisible text when they failed to match.) */
+    [data-testid="stAlertContainer"] {{
+        background-color: {t["card"]} !important;
+        border: 1px solid {t["border"]} !important;
         border-radius: 10px !important;
-        border-width: 1px !important;
-        border-style: solid !important;
     }}
-    div[data-testid="stAlert"] p, [data-testid="stAlertContainer"] p,
-    div[data-testid="stAlert"] * {{
-        color: inherit !important;
+    [data-testid="stAlertContainer"],
+    [data-testid="stAlertContainer"] p,
+    [data-testid="stAlertContainer"] span,
+    [data-testid="stAlertContainer"] li,
+    [data-testid="stAlertContainer"] strong {{
+        color: {t["text"]} !important;
     }}
-    div[data-baseweb="notification"][kind="positive"],
-    [data-testid="stAlertContainer"]:has(svg[data-icon="check-circle-fill"]) {{
-        background-color: {t["success_bg"]} !important;
-        border-color: {t["success_bd"]} !important;
-        color: {t["success_text"]} !important;
-    }}
-    div[data-baseweb="notification"][kind="negative"],
-    [data-testid="stAlertContainer"]:has(svg[data-icon="x-circle-fill"]) {{
-        background-color: {t["error_bg"]} !important;
-        border-color: {t["error_bd"]} !important;
-        color: {t["error_text"]} !important;
-    }}
-    div[data-baseweb="notification"][kind="warning"],
-    [data-testid="stAlertContainer"]:has(svg[data-icon="exclamation-triangle-fill"]) {{
-        background-color: {t["warning_bg"]} !important;
-        border-color: {t["warning_bd"]} !important;
-        color: {t["warning_text"]} !important;
-    }}
-    div[data-baseweb="notification"][kind="info"],
-    [data-testid="stAlertContainer"]:has(svg[data-icon="info-circle-fill"]) {{
-        background-color: {t["info_bg"]} !important;
-        border-color: {t["info_bd"]} !important;
-        color: {t["info_text"]} !important;
+    [data-testid="stAlertContainer"] svg {{
+        fill: {t["accent"]} !important;
     }}
 
     /* Spinner text */
-    [data-testid="stSpinner"] p, [data-testid="stSpinner"] div {{
+    [data-testid="stSpinner"] p {{
         color: {t["text"]} !important;
     }}
 
-    /* Chat Message Cards */
+    /* Chat message cards: background + text set together */
     [data-testid="stChatMessage"] {{
         background-color: {t["card"]} !important;
-        color: {t["text"]} !important;
         border: 1px solid {t["border"]} !important;
         border-radius: 12px;
         padding: 12px 16px;
         margin-bottom: 12px;
     }}
-    [data-testid="stChatMessage"] p, [data-testid="stChatMessage"] li,
+    [data-testid="stChatMessage"],
+    [data-testid="stChatMessage"] p,
+    [data-testid="stChatMessage"] li,
+    [data-testid="stChatMessage"] span {{
+        color: {t["text"]} !important;
+    }}
     [data-testid="stChatMessage"] code {{
+        background-color: {t["input_bg"]} !important;
         color: {t["text"]} !important;
     }}
 
-    /* Bottom Chat Input Prompt Section & Submit Send Button */
+    /* Chat input box: background + text set together, placeholder+caret too */
     [data-testid="stChatInput"] {{
         background-color: {t["input_bg"]} !important;
         border: 1px solid {t["border"]} !important;
         border-radius: 12px !important;
     }}
     [data-testid="stChatInput"] textarea {{
-        color: {t["text"]} !important;
         background-color: transparent !important;
+        color: {t["text"]} !important;
+        caret-color: {t["text"]} !important;
+        -webkit-text-fill-color: {t["text"]} !important;
     }}
     [data-testid="stChatInput"] textarea::placeholder {{
         color: {t["text_muted"]} !important;
-    }}
-    [data-testid="stChatInputSubmitButton"], [data-testid="stChatInput"] button {{
-        background-color: {t["accent"]} !important;
-        color: {t["accent_text"]} !important;
-        border-radius: 8px !important;
         opacity: 1 !important;
-        visibility: visible !important;
-    }}
-    [data-testid="stChatInputSubmitButton"] svg, [data-testid="stChatInput"] button svg {{
-        fill: {t["accent_text"]} !important;
-        color: {t["accent_text"]} !important;
     }}
 
-    /* Generic buttons (fallback so nothing is left unstyled) */
+    /* Chat submit button: deliberately its OWN color pair (accent bg,
+       always-white text) — must not inherit the base app text color */
+    [data-testid="stChatInputSubmitButton"] {{
+        background-color: {t["accent"]} !important;
+        border-radius: 8px !important;
+    }}
+    [data-testid="stChatInputSubmitButton"] svg {{
+        fill: {t["accent_text"]} !important;
+    }}
+
+    /* Generic buttons: background + text set together */
     .stButton button {{
         background-color: {t["input_bg"]} !important;
         color: {t["text"]} !important;
@@ -306,13 +289,13 @@ st.markdown(
         border-radius: 8px !important;
     }}
 
-    /* Inline code / markdown code blocks */
-    .stMarkdown code, .stApp code {{
+    /* Inline code / markdown code blocks outside chat */
+    .stMarkdown code {{
         background-color: {t["input_bg"]} !important;
         color: {t["text"]} !important;
     }}
 
-    /* Subject Badge */
+    /* Subject badge: its own explicit color pair */
     .subject-badge {{
         display: inline-block;
         background: {t["accent"]};
@@ -324,7 +307,6 @@ st.markdown(
         margin-bottom: 12px;
     }}
 
-    /* Dividers */
     hr {{
         border-color: {t["border"]} !important;
     }}
