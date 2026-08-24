@@ -172,8 +172,9 @@ st.markdown(
     header[data-testid="stHeader"] {{
         background-color: transparent !important;
     }}
-    header[data-testid="stHeader"] button, 
-    header[data-testid="stHeader"] svg {{
+    header[data-testid="stHeader"] *,
+    header[data-testid="stHeader"] svg,
+    header[data-testid="stHeader"] svg path {{
         color: var(--text-main) !important;
         fill: var(--text-main) !important;
     }}
