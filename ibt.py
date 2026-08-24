@@ -133,90 +133,127 @@ with st.sidebar:
 t = THEME["dark" if is_dark else "light"]
 
 # ── Global CSS ──────────────────────────────────────────────────────────────
-# Strategy: background + text color are ALWAYS set together, in the same rule,
-# for every "boxed" component. The base `.stApp` rule only sets an *inherited*
-# text color (no blanket per-element !important), so nested elements that need
-# their own contrast (accent buttons, badges) aren't fought by a global rule.
-# No selectors that guess at Streamlit's internal DOM structure (icons,
-# baseweb notification "kind" attributes, nested span order) are used —
-# only documented/stable data-testid hooks and real HTML form elements.
 st.markdown(
     f"""
     <style>
-    /* Base app: background + inherited text color */
-    .stApp {{
-        background-color: {t["bg"]} !important;
-        color: {t["text"]};
+    /* CSS Custom Properties for theme variables */
+    :root {{
+        --bg-main: {t["bg"]};
+        --sidebar-bg: {t["sidebar_bg"]};
+        --text-main: {t["text"]};
+        --text-muted: {t["text_muted"]};
+        --card-bg: {t["card"]};
+        --input-bg: {t["input_bg"]};
+        --border-color: {t["border"]};
+        --accent-color: {t["accent"]};
+        --accent-text: {t["accent_text"]};
     }}
 
-    /* Sidebar: its own background + inherited text color */
+    /* Base app container and main page pane */
+    .stApp, 
+    [data-testid="stAppViewContainer"], 
+    [data-testid="stMain"], 
+    [data-testid="stMainBlockContainer"], 
+    [data-testid="stAppViewBlockContainer"] {{
+        background-color: var(--bg-main) !important;
+        color: var(--text-main) !important;
+    }}
+
+    /* Sidebar container */
     section[data-testid="stSidebar"] {{
-        background-color: {t["sidebar_bg"]} !important;
-        color: {t["text"]};
+        background-color: var(--sidebar-bg) !important;
+        color: var(--text-main) !important;
+    }}
+    section[data-testid="stSidebar"] * {{
+        color: var(--text-main);
     }}
 
-    /* Header / toolbar icons */
-    header[data-testid="stHeader"], [data-testid="stHeader"] * {{
+    /* Header toolbar (Top Right buttons / icons) */
+    header[data-testid="stHeader"] {{
         background-color: transparent !important;
     }}
-    header[data-testid="stHeader"] button, header[data-testid="stHeader"] svg,
-    [data-testid="stToolbar"] button, [data-testid="stToolbar"] svg {{
-        fill: {t["text"]} !important;
-        color: {t["text"]} !important;
+    header[data-testid="stHeader"] button, 
+    header[data-testid="stHeader"] svg {{
+        color: var(--text-main) !important;
+        fill: var(--text-main) !important;
     }}
 
-    /* Muted caption text (sidebar "About" description) */
-    [data-testid="stCaptionContainer"], .stCaption {{
-        color: {t["text_muted"]} !important;
+    /* Top-right menu popover / dropdowns */
+    [data-testid="stPopoverBody"], div[role="listbox"], div[role="menu"] {{
+        background-color: var(--card-bg) !important;
+        color: var(--text-main) !important;
+        border: 1px solid var(--border-color) !important;
     }}
 
-    /* Widget labels */
-    [data-testid="stWidgetLabel"] p {{
-        color: {t["text"]} !important;
+    /* Radio buttons & Toggles accent overrides */
+    [data-testid="stRadio"] label p,
+    [data-testid="stCheckbox"] label p {{
+        color: var(--text-main) !important;
+    }}
+    /* Radio selection circle / dot / border styling */
+    [data-testid="stRadio"] *, 
+    [data-baseweb="radio"] *, 
+    [data-baseweb="checkbox"] * {{
+        accent-color: var(--accent-color) !important;
+    }}
+    [aria-checked="true"] > div,
+    [data-baseweb="radio"] [aria-checked="true"] div,
+    [data-testid="stRadio"] [aria-checked="true"] div {{
+        background-color: var(--accent-color) !important;
+        border-color: var(--accent-color) !important;
+    }}
+    [data-testid="stRadio"] svg,
+    [data-baseweb="radio"] svg {{
+        fill: var(--accent-color) !important;
+        color: var(--accent-color) !important;
+    }}
+    /* Widget labels & Captions */
+    [data-testid="stWidgetLabel"] p, label p {{
+        color: var(--text-main) !important;
         font-weight: 500;
     }}
-
-    /* Dark Mode toggle: verified real testid is "stCheckbox" (st.toggle
-       renders through the same component as st.checkbox, distinguished
-       only by an internal style flag — it does NOT render as "stToggle",
-       which is why an earlier version's rule never matched anything). */
-    [data-testid="stCheckbox"] label p {{
-        color: {t["text"]} !important;
+    [data-testid="stCaptionContainer"], .stCaption {{
+        color: var(--text-muted) !important;
     }}
 
-    /* Subject radio group: verified real testid is "stRadio" */
-    [data-testid="stRadio"] label p,
-    [data-testid="stRadio"] [data-testid="stWidgetLabel"] p {{
-        color: {t["text"]} !important;
+    /* Radio selection dot & border styling */
+    [data-testid="stRadio"] div[role="radiogroup"] [aria-checked="true"] svg {{
+        fill: var(--accent-color) !important;
+    }}
+    [data-testid="stRadio"] div[role="radiogroup"] [data-baseweb="radio"] div:first-child {{
+        border-color: var(--accent-color) !important;
+    }}
+    [data-baseweb="radio"] [aria-checked="true"] > div {{
+        background-color: var(--accent-color) !important;
+        border-color: var(--accent-color) !important;
+    }}
+    [data-baseweb="checkbox"] [aria-checked="true"] > div {{
+        background-color: var(--accent-color) !important;
+        border-color: var(--accent-color) !important;
     }}
 
-    /* Alert boxes: st.success / st.error / st.warning / st.info.
-       Verified against Streamlit's actual frontend source: the outer
-       [data-testid="stAlert"] div is an unstyled flex wrapper — the real
-       colored box is its direct child <div>. Targeting the wrapper alone
-       (as a prior version did, using the wrong testid "stAlertContainer")
-       has no visible effect since the child paints over it. */
+    /* Alerts */
     [data-testid="stAlert"] > div {{
-        background-color: {t["card"]} !important;
-        border: 1px solid {t["border"]} !important;
+        background-color: var(--card-bg) !important;
+        border: 1px solid var(--border-color) !important;
         border-radius: 10px !important;
     }}
-    [data-testid="stAlert"] * {{
-        color: {t["text"]} !important;
+    [data-testid="stAlert"] p, [data-testid="stAlert"] span {{
+        color: var(--text-main) !important;
     }}
     [data-testid="stAlert"] svg {{
-        fill: {t["accent"]} !important;
+        fill: var(--accent-color) !important;
     }}
 
-    /* Spinner text */
+    /* Spinners */
     [data-testid="stSpinner"] p {{
-        color: {t["text"]} !important;
+        color: var(--text-main) !important;
     }}
 
-    /* Chat message cards: background + text set together */
+    /* Chat message cards */
     [data-testid="stChatMessage"] {{
-        background-color: {t["card"]} !important;
-        border: 1px solid {t["border"]} !important;
+        background-color: var(--card-bg) !important;
+        border: 1px solid var(--border-color) !important;
         border-radius: 12px;
         padding: 12px 16px;
         margin-bottom: 12px;
@@ -225,61 +262,65 @@ st.markdown(
     [data-testid="stChatMessage"] p,
     [data-testid="stChatMessage"] li,
     [data-testid="stChatMessage"] span {{
-        color: {t["text"]} !important;
+        color: var(--text-main) !important;
     }}
     [data-testid="stChatMessage"] code {{
-        background-color: {t["input_bg"]} !important;
-        color: {t["text"]} !important;
+        background-color: var(--input-bg) !important;
+        color: var(--text-main) !important;
     }}
 
-    /* Chat input box: background + text set together, placeholder+caret too */
-    [data-testid="stChatInput"] {{
-        background-color: {t["input_bg"]} !important;
-        border: 1px solid {t["border"]} !important;
-        border-radius: 12px !important;
+    /* Bottom container (Chat Input area & sticky bar) */
+    [data-testid="stBottom"], 
+    [data-testid="stBottomBlockContainer"],
+    .stApp > footer {{
+        background-color: var(--bg-main) !important;
+        border-top: 1px solid var(--border-color) !important;
     }}
-    [data-testid="stChatInput"] textarea {{
+    
+    /* Strip backgrounds from all intermediate wrapper/spacer elements so they are transparent */
+    [data-testid="stBottom"] *,
+    [data-testid="stBottomBlockContainer"] * {{
         background-color: transparent !important;
-        color: {t["text"]} !important;
-        caret-color: {t["text"]} !important;
-        -webkit-text-fill-color: {t["text"]} !important;
     }}
-    [data-testid="stChatInput"] textarea::placeholder {{
-        color: {t["text_muted"]} !important;
+
+    /* Target Chat Input Box */
+    [data-testid="stBottom"] [data-testid="stChatInput"] {{
+        background-color: var(--input-bg) !important;
+        border: 1px solid var(--border-color) !important;
+        border-radius: 12px !important;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05) !important;
+    }}
+    [data-testid="stBottom"] [data-testid="stChatInput"] textarea {{
+        background-color: transparent !important;
+        color: var(--text-main) !important;
+        caret-color: var(--text-main) !important;
+        -webkit-text-fill-color: var(--text-main) !important;
+    }}
+    [data-testid="stBottom"] [data-testid="stChatInput"] textarea::placeholder {{
+        color: var(--text-muted) !important;
+        -webkit-text-fill-color: var(--text-muted) !important;
         opacity: 1 !important;
     }}
 
-    /* Bottom bar wrapper that holds the chat input (was showing default white) */
-    [data-testid="stBottom"], [data-testid="stBottomBlockContainer"] {{
-        background-color: {t["bg"]} !important;
-    }}
-    [data-testid="stBottom"] * , [data-testid="stBottomBlockContainer"] * {{
-        color: {t["text"]} !important;
-    }}
-
-    /* Chat submit button: deliberately its OWN color pair (accent bg,
-       always-white text) — must not inherit the base app text color */
-    [data-testid="stChatInputSubmitButton"] {{
-        background-color: {t["accent"]} !important;
+    /* Chat submit button: scoped accent style */
+    [data-testid="stBottom"] [data-testid="stChatInputSubmitButton"] {{
+        background-color: var(--accent-color) !important;
         border-radius: 8px !important;
     }}
-    [data-testid="stChatInputSubmitButton"] svg {{
-        fill: {t["accent_text"]} !important;
+    [data-testid="stBottom"] [data-testid="stChatInputSubmitButton"] svg {{
+        fill: var(--accent-text) !important;
     }}
 
-    /* Buttons: verified real testids "stBaseButton-secondary" / "-primary"
-       (used for the Light/Dark switch and the subject picker). Precise
-       and independently styleable — unlike st.toggle/st.radio, these do
-       not depend on Streamlit's own unswitched internal theme. */
+    /* Buttons */
     [data-testid="stBaseButton-secondary"] {{
-        background-color: {t["input_bg"]} !important;
-        color: {t["text"]} !important;
-        border: 1px solid {t["border"]} !important;
+        background-color: var(--input-bg) !important;
+        color: var(--text-main) !important;
+        border: 1px solid var(--border-color) !important;
         border-radius: 8px !important;
     }}
     [data-testid="stBaseButton-secondary"]:hover {{
-        border-color: {t["accent"]} !important;
-        color: {t["accent"]} !important;
+        border-color: var(--accent-color) !important;
+        color: var(--accent-color) !important;
     }}
     [data-testid="stBaseButton-primary"] {{
         background-color: {t["accent"]} !important;
@@ -333,6 +374,9 @@ def is_conversational_query(text: str) -> bool:
     """
     Returns True if the text is a greeting, farewell, or casual pleasantry
     that does NOT require document retrieval from FAISS.
+
+    Uses re.fullmatch so patterns must cover the ENTIRE input — prevents
+    short academic queries like "Hi explain MRS" from being misclassified.
     """
     cleaned = text.strip().lower()
 
@@ -340,25 +384,59 @@ def is_conversational_query(text: str) -> bool:
     if any(kw in cleaned for kw in ["summarize", "summary", "brief", "recap", "short version", "bullet points"]):
         return False
 
-    # Exact match for common short greetings / pleasantries
+    # ── Exact-match casual phrases ────────────────────────────────────────────
     casual_phrases = {
-        "hi", "hello", "hey", "hey there", "good morning", "good afternoon",
-        "good evening", "howdy", "greetings", "thanks", "thank you",
-        "who created you", "who made you", "what can you do", "bye", "goodbye"
+        # Greetings
+        "hi", "hi there", "hello", "hello there", "hey", "hey there", "hey!",
+        "howdy", "hiya", "what's up", "whats up", "sup", "yo",
+        "good morning", "good afternoon", "good evening", "good day", "good night",
+        "greetings", "salutations",
+
+        # Appreciation / politeness
+        "thanks", "thank you", "thank you so much", "thanks a lot", "thanks a bunch",
+        "cheers", "much appreciated", "appreciate it", "ty", "thx",
+
+        # Farewells
+        "bye", "goodbye", "see you", "see ya", "later", "take care",
+        "have a good day", "have a great day", "ttyl", "talk later",
+
+        # Identity / meta questions
+        "who are you", "who created you", "who made you", "who built you",
+        "who built this", "who built this app", "who made this app",
+        "what are you", "what can you do", "what do you do",
+        "are you an ai", "are you a bot", "are you human",
+        "tell me about yourself",
+
+        # Affirmations / small talk
+        "ok", "okay", "ok thanks", "okay thanks", "got it", "i see",
+        "cool", "nice", "awesome", "great", "perfect", "sounds good",
+        "sure", "alright", "no problem", "no worries",
     }
     if cleaned in casual_phrases:
         return True
 
-    # Pattern matching for greetings with punctuation or extra words
+    # ── Pattern matching (fullmatch — must cover the ENTIRE input) ────────────
+    # Prevents "Hi explain MRS" from being misclassified as a greeting
     greeting_patterns = [
-        r"^(hi|hello|hey|greetings|good morning|good afternoon|good evening)[\!\?\.,\s]*",
-        r"^(thank you|thanks|bye|goodbye)[\!\?\.,\s]*",
-        r"^(who (created|made|built) (you|this app))",
+        # Simple greetings ± punctuation/whitespace
+        r"(hi|hello|hey|howdy|hiya|yo|sup|greetings|salutations)[\!\?\.,\s]*",
+        # Time-of-day greetings
+        r"good\s(morning|afternoon|evening|day|night)[\!\?\.,\s]*",
+        # Farewells
+        r"(bye|goodbye|see\s(you|ya)|later|take\s?care|ttyl)[\!\?\.,\s]*",
+        # Thanks
+        r"(thank\s?you|thanks|cheers|ty|thx)[\!\?\.,\s]*",
+        # Identity / meta
+        r"(who\s(are|created|made|built)\s(you|this(\s?app)?))[\?\.,\s]*",
+        r"(what\s(are|can)\syou\s?(do)?)[\?\.,\s]*",
+        r"(are\syou\s(an?\s)?(ai|bot|human))[\?\.,\s]*",
+        # Short affirmations
+        r"(ok|okay|got\sit|i\ssee|cool|nice|awesome|great|perfect|alright|sure)[\!\?\.,\s]*",
     ]
     for pattern in greeting_patterns:
-        if re.match(pattern, cleaned):
-            # If the user asks a detailed question (>5 words), send it to retrieval
-            if len(cleaned.split()) > 5:
+        if re.fullmatch(pattern, cleaned):
+            # If more than 3 words total, it's likely a real question — send to retrieval
+            if len(cleaned.split()) > 3:
                 return False
             return True
 
@@ -384,6 +462,16 @@ def load_embeddings() -> HuggingFaceEmbeddings:
     return HuggingFaceEmbeddings(
         model_name="sentence-transformers/all-MiniLM-L6-v2",
         model_kwargs={"device": "cpu"},
+    )
+
+
+@st.cache_resource(show_spinner=False)
+def load_llm() -> ChatGoogleGenerativeAI:
+    """Load and cache the Gemini LLM (built once, reused on every message)."""
+    return ChatGoogleGenerativeAI(
+        temperature=0,
+        model="gemini-3.6-flash",
+        google_api_key=os.getenv("GOOGLE_API_KEY"),
     )
 
 
@@ -434,9 +522,13 @@ def load_vector_store(faiss_dir: str, subject_name: str):
 
 @st.cache_resource(show_spinner=False)
 def setup_qa_chain(_vector_store, subject_prompt: str):
-    """Build the LCEL QA chain for the given vector store and prompt."""
+    """Build and cache the LCEL QA chain for the given vector store and prompt.
+
+    Returns a flat chain: {"input": str} → str (answer tokens streamed).
+    Uses StrOutputParser so .stream() yields plain strings directly.
+    """
     api_key = os.getenv("GOOGLE_API_KEY")
-    llm = ChatGoogleGenerativeAI(temperature=0, model="gemini-3-flash-preview", google_api_key=api_key)
+    llm = ChatGoogleGenerativeAI(temperature=0, model="gemini-3.6-flash", google_api_key=api_key)
     prompt = ChatPromptTemplate.from_template(subject_prompt)
     retriever = _vector_store.as_retriever(
         search_type="similarity",
@@ -459,11 +551,8 @@ def setup_qa_chain(_vector_store, subject_prompt: str):
         }
     )
 
-    answer_chain = format_for_llm | prompt | llm | StrOutputParser()
-
-    qa_chain = setup_and_retrieval | RunnableParallel(
-        {"answer": answer_chain, "context": lambda x: x["context"]}
-    )
+    # Flat chain: retrieval → format → prompt → LLM → plain string
+    qa_chain = setup_and_retrieval | format_for_llm | prompt | llm | StrOutputParser()
 
     return qa_chain
 
@@ -520,24 +609,23 @@ if user_prompt := st.chat_input(f"Ask a question about {selected_subject_name}�
 
     with st.chat_message("assistant"):
         message_placeholder = st.empty()
+        full_response = ""  # Ensure full_response is always defined (BUG-3 fix)
 
         try:
             # PATH A: Casual Greetings / Pleasantries (Bypasses FAISS Retrieval completely)
             if is_conversational_query(user_prompt):
-                api_key = os.getenv("GOOGLE_API_KEY")
-                llm = ChatGoogleGenerativeAI(temperature=0, model="gemini-3-flash-preview", google_api_key=api_key)
+                llm = load_llm()
                 greeting_prompt = (
                     f"You are BSQE2 AI, an elite study assistant for Bachelor of Science in Quantitative Economics students "
                     f"currently helping with {selected_subject_name}.\n\n"
                     f"Respond warmly, naturally, and concisely to this user greeting: '{user_prompt}'."
                 )
-                response_stream = llm.stream(greeting_prompt)
+                response_stream = (llm | StrOutputParser()).stream(greeting_prompt)
                 full_response = st.write_stream(response_stream)
 
             # PATH B: Explicit User Summarization Request (Summarizes previous answer if available)
             elif is_summarization_request(user_prompt):
-                api_key = os.getenv("GOOGLE_API_KEY")
-                llm = ChatGoogleGenerativeAI(temperature=0, model="gemini-3-flash-preview", google_api_key=api_key)
+                llm = load_llm()
 
                 # Find the last assistant message in chat history
                 last_assistant_msg = None
@@ -551,7 +639,7 @@ if user_prompt := st.chat_input(f"Ask a question about {selected_subject_name}�
                         f"You are BSQE2 AI. Summarize the following answer clearly into concise bullet points, "
                         f"highlighting key definitions and main takeaways:\n\n{last_assistant_msg}"
                     )
-                    response_stream = llm.stream(summary_prompt)
+                    response_stream = (llm | StrOutputParser()).stream(summary_prompt)
                     full_response = st.write_stream(response_stream)
                 else:
                     # Fallback if no prior answer exists: treat as standard RAG query with summary instruction
@@ -568,25 +656,14 @@ if user_prompt := st.chat_input(f"Ask a question about {selected_subject_name}�
                         docs = retriever.invoke(user_prompt)
                         context_str = "\n\n".join(doc.page_content for doc in docs)
                         formatted_prompt = prompt.format(context=context_str, input=user_prompt)
-                        response_stream = llm.stream(formatted_prompt)
+                        response_stream = (llm | StrOutputParser()).stream(formatted_prompt)
                         full_response = st.write_stream(response_stream)
 
             # PATH C: Standard Academic Course Questions (Full, Detailed, Step-by-Step Response by default)
             else:
                 with st.spinner("Thinking…"):
-                    api_key = os.getenv("GOOGLE_API_KEY")
-                    llm = ChatGoogleGenerativeAI(temperature=0, model="gemini-3-flash-preview", google_api_key=api_key)
-                    prompt = ChatPromptTemplate.from_template(selected_cfg["prompt"])
-                    retriever = vector_store.as_retriever(
-                        search_type="similarity",
-                        search_kwargs={"k": 5},
-                    )
-
-                    docs = retriever.invoke(user_prompt)
-                    context_str = "\n\n".join(doc.page_content for doc in docs)
-
-                    formatted_prompt = prompt.format(context=context_str, input=user_prompt)
-                    response_stream = llm.stream(formatted_prompt)
+                    # Use the cached qa_chain — no need to rebuild LLM/retriever/prompt per message
+                    response_stream = qa_chain.stream({"input": user_prompt})
                     full_response = st.write_stream(response_stream)
 
             if not full_response:
