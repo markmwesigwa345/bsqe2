@@ -249,6 +249,14 @@ st.markdown(
         opacity: 1 !important;
     }}
 
+    /* Bottom bar wrapper that holds the chat input (was showing default white) */
+    [data-testid="stBottom"], [data-testid="stBottomBlockContainer"] {{
+        background-color: {t["bg"]} !important;
+    }}
+    [data-testid="stBottom"] * , [data-testid="stBottomBlockContainer"] * {{
+        color: {t["text"]} !important;
+    }}
+
     /* Chat submit button: deliberately its OWN color pair (accent bg,
        always-white text) — must not inherit the base app text color */
     [data-testid="stChatInputSubmitButton"] {{
