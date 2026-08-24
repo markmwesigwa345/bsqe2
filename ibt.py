@@ -97,52 +97,86 @@ with st.sidebar:
     st.divider()
     st.write("Made by Mwesigwa Mark")
 
-# Comprehensive Full-Screen CSS Overrides
+# Apply Streamlit's Native Theme Options dynamically
+try:
+    st._config.set_option("theme.base", "dark" if is_dark else "light")
+    st._config.set_option("theme.backgroundColor", "#0E1117" if is_dark else "#FFFFFF")
+    st._config.set_option("theme.secondaryBackgroundColor", "#161B22" if is_dark else "#F1F5F9")
+    st._config.set_option("theme.textColor", "#FAFAFA" if is_dark else "#0F172A")
+    st._config.set_option("theme.primaryColor", "#2563EB")
+except Exception:
+    pass
+
+# Precise CSS Overrides for Whole Page Coverage without hiding native controls
 bg_color = "#0E1117" if is_dark else "#FFFFFF"
 sidebar_bg = "#161B22" if is_dark else "#F8FAFC"
 text_color = "#FAFAFA" if is_dark else "#0F172A"
 card_bg = "#1E232A" if is_dark else "#F1F5F9"
 input_bg = "#262730" if is_dark else "#FFFFFF"
-input_text = "#FAFAFA" if is_dark else "#0F172A"
+border_color = "#30363D" if is_dark else "#CBD5E1"
 badge_bg = "#007bff" if is_dark else "#2563EB"
-border_color = "#30363D" if is_dark else "#E2E8F0"
+icon_color = "#FAFAFA" if is_dark else "#0F172A"
 
 st.markdown(
     f"""
     <style>
-    /* Full viewport background & typography */
-    .stApp, [data-testid="stHeader"], [data-testid="stToolbar"] {{
+    /* Main App & Sidebar Backgrounds */
+    .stApp {{
         background-color: {bg_color} !important;
-        color: {text_color} !important;
     }}
-    
-    /* Full sidebar background */
-    section[data-testid="stSidebar"], section[data-testid="stSidebar"] > div {{
+    section[data-testid="stSidebar"] {{
         background-color: {sidebar_bg} !important;
-        color: {text_color} !important;
     }}
     
-    /* All headers, markdown, labels & text */
-    h1, h2, h3, h4, h5, h6, p, span, label, .stMarkdown {{
+    /* Top Header & Action Menu Bar */
+    [data-testid="stHeader"] {{
+        background-color: {bg_color} !important;
+    }}
+    [data-testid="stHeader"] svg, [data-testid="stHeader"] button, [data-testid="stToolbar"] button {{
+        fill: {icon_color} !important;
+        color: {icon_color} !important;
+    }}
+
+    /* Main Typography */
+    .stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp h5, .stApp h6, .stApp p, .stApp label {{
         color: {text_color} !important;
     }}
 
-    /* Chat message cards */
+    /* Toggle Switch Label & Knob Visibility */
+    [data-testid="stWidgetLabel"] p {{
+        color: {text_color} !important;
+        font-weight: 500;
+    }}
+
+    /* Chat Message Cards */
     [data-testid="stChatMessage"] {{
         background-color: {card_bg} !important;
         color: {text_color} !important;
-        border: 1px solid {border_color};
+        border: 1px solid {border_color} !important;
         border-radius: 12px;
         padding: 12px 16px;
         margin-bottom: 12px;
     }}
+    [data-testid="stChatMessage"] p {{
+        color: {text_color} !important;
+    }}
 
-    /* Chat Input Bar */
-    [data-testid="stChatInput"], [data-testid="stChatInput"] textarea {{
+    /* Bottom Chat Input Prompt Section */
+    [data-testid="stChatInput"] {{
         background-color: {input_bg} !important;
-        color: {input_text} !important;
         border: 1px solid {border_color} !important;
-        border-radius: 10px;
+        border-radius: 12px !important;
+    }}
+    [data-testid="stChatInput"] textarea {{
+        color: {text_color} !important;
+        background-color: transparent !important;
+    }}
+    [data-testid="stChatInput"] button {{
+        color: {icon_color} !important;
+        fill: {icon_color} !important;
+    }}
+    [data-testid="stChatInput"] button svg {{
+        fill: {icon_color} !important;
     }}
 
     /* Subject Badge */
