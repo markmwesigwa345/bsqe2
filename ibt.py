@@ -32,7 +32,9 @@ try:
     from langchain_community.vectorstores import FAISS
     from langchain_core.runnables import RunnableParallel
     from langchain_core.output_parsers import StrOutputParser
-    from langchain_core.prompts import ChatPromptTemplate
+    from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+    from langchain_core.messages import HumanMessage, AIMessage
+    from langchain.chains import create_history_aware_retriever
 except ImportError as e:
     st.error(f"❌ Missing dependency: **{e}**")
     st.info(
@@ -525,38 +527,70 @@ def load_vector_store(faiss_dir: str, subject_name: str):
 def setup_qa_chain(_vector_store, subject_prompt: str):
     """Build and cache the LCEL QA chain for the given vector store and prompt.
 
-    Returns a flat chain: {"input": str} → str (answer tokens streamed).
-    Uses StrOutputParser so .stream() yields plain strings directly.
+    Uses a history-aware retriever that reformulates follow-up questions into
+    standalone queries before searching FAISS, so responses like 'explain each
+    point you listed' correctly retrieve context from the right subject matter.
+
+    Returns a chain: {"input": str, "chat_history": list} → str (streamed).
     """
     api_key = os.getenv("GOOGLE_API_KEY")
     llm = ChatGoogleGenerativeAI(temperature=0, model="gemini-3.6-flash", google_api_key=api_key)
-    prompt = ChatPromptTemplate.from_template(subject_prompt)
+
     retriever = _vector_store.as_retriever(
         search_type="similarity",
         search_kwargs={"k": 5},
     )
 
+    # Reformulation prompt: condenses chat history + current question into one
+    # complete standalone question before it is sent to the FAISS retriever.
+    reformulation_prompt = ChatPromptTemplate.from_messages([
+        MessagesPlaceholder("chat_history"),
+        ("human", "{input}"),
+        ("human", (
+            "Given the conversation above, rephrase my latest message into a single, "
+            "complete, self-contained question that captures exactly what I am asking. "
+            "Do not answer it — only rewrite it."
+        )),
+    ])
+
+    history_aware_retriever = create_history_aware_retriever(
+        llm, retriever, reformulation_prompt
+    )
+
+    answer_prompt = ChatPromptTemplate.from_template(subject_prompt)
+
     def format_docs(docs):
         return "\n\n".join(doc.page_content for doc in docs)
 
-    def format_for_llm(inputs: dict) -> dict:
-        return {
-            "context": format_docs(inputs["context"]),
-            "input": inputs["input"],
-        }
-
-    setup_and_retrieval = RunnableParallel(
-        {
-            "context": lambda x: retriever.invoke(x["input"]),
+    # Chain: reformulate → retrieve → format context → answer prompt → LLM → str
+    qa_chain = (
+        RunnableParallel({
+            "context": lambda x: format_docs(
+                history_aware_retriever.invoke({
+                    "input": x["input"],
+                    "chat_history": x.get("chat_history", []),
+                })
+            ),
             "input": lambda x: x["input"],
-        }
+        })
+        | answer_prompt
+        | llm
+        | StrOutputParser()
     )
-
-    # Flat chain: retrieval → format → prompt → LLM → plain string
-    qa_chain = setup_and_retrieval | format_for_llm | prompt | llm | StrOutputParser()
 
     return qa_chain
 
+
+def build_chat_history(messages: list) -> list:
+    """Convert st.session_state.messages into LangChain HumanMessage/AIMessage
+    objects so the history-aware retriever can read conversation context."""
+    history = []
+    for msg in messages:
+        if msg["role"] == "user":
+            history.append(HumanMessage(content=msg["content"]))
+        elif msg["role"] == "assistant":
+            history.append(AIMessage(content=msg["content"]))
+    return history
 
 # ── Main App ──────────────────────────────────────────────────────────────────
 
@@ -663,9 +697,15 @@ if user_prompt := st.chat_input(f"Ask a question about {selected_subject_name}�
             # PATH C: Standard Academic Course Questions (Full, Detailed, Step-by-Step Response by default)
             else:
                 with st.spinner("Thinking…"):
-                    # Use the cached qa_chain — no need to rebuild LLM/retriever/prompt per message
-                    response_stream = qa_chain.stream({"input": user_prompt})
+                    # Build chat history (all messages before the current user prompt)
+                    # so the history-aware retriever can reformulate follow-up questions.
+                    chat_history = build_chat_history(st.session_state.messages[:-1])
+                    response_stream = qa_chain.stream({
+                        "input": user_prompt,
+                        "chat_history": chat_history,
+                    })
                     full_response = st.write_stream(response_stream)
+
 
             if not full_response:
                 full_response = (
