@@ -87,7 +87,7 @@ Answer:""",
 
     "Business Strategic Models": {
         "icon": "⚙️",
-        "faiss_dir": "business_strategic_models_faisss",
+        "faiss_dir": "business_strategic_models_faiss",
         "description": (
             "Qualitative strategic management—covering strategic analysis models, decision hierarchies, "
             "governance structures, and quantitative applications for statisticians (BQ2105)."

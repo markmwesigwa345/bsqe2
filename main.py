@@ -10,6 +10,7 @@ NOTE: This is the older single-subject version of the app.
 
 import streamlit as st
 import os
+from dotenv import load_dotenv
 
 # Updated imports — langchain_huggingface replaces deprecated langchain_community embeddings
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -35,9 +36,15 @@ except Exception:
     pass
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-# Point this at the FAISS folder for the single subject you want to serve.
-# Generate it with colab.ipynb then place the folder in the project directory.
-VECTOR_STORE_DIR = os.path.join(SCRIPT_DIR, "ITB_notes_2025_faiss")
+
+# ── CONFIGURE THIS BEFORE RUNNING main.py ─────────────────────────────────────
+# Set VECTOR_STORE_DIR to the name of the FAISS folder you generated via
+# colab.ipynb and placed in the same directory as this file.
+# Example: "micro_economics_faiss"  or  "financial_analysis_faiss"
+# NOTE: This file is the legacy single-subject app. The active multi-subject
+#       production app is ibt.py — use that instead.
+# ──────────────────────────────────────────────────────────────────────────────
+VECTOR_STORE_DIR = os.path.join(SCRIPT_DIR, "YOUR_FAISS_FOLDER_HERE")
 
 # Sidebar contents
 with st.sidebar:
