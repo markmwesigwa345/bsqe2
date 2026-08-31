@@ -11,8 +11,10 @@ Architecture:
 ─────────────────────────────────────────────────────────────────────────────
 """
 
+import json
 import os
 import re
+import uuid
 import streamlit as st
 from dotenv import load_dotenv
 
@@ -46,8 +48,41 @@ except ImportError as e:
 # ── Subject Registry ──────────────────────────────────────────────────────────
 from subjects_config import SUBJECTS
 
-# ── Paths ─────────────────────────────────────────────────────────────────────
+# ── Paths & Session Persistence Storage ───────────────────────────────────────
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+SESSIONS_DIR = os.path.join(SCRIPT_DIR, ".chat_sessions")
+
+def _ensure_sessions_dir():
+    try:
+        os.makedirs(SESSIONS_DIR, exist_ok=True)
+    except Exception:
+        pass
+
+
+def load_session_history(session_id: str) -> dict:
+    """Load chat history dictionary across all subjects for a given session ID (fail-safe)."""
+    _ensure_sessions_dir()
+    filepath = os.path.join(SESSIONS_DIR, f"{session_id}.json")
+    if os.path.exists(filepath):
+        try:
+            with open(filepath, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                if isinstance(data, dict):
+                    return data
+        except Exception:
+            pass
+    return {}
+
+
+def save_session_history(session_id: str, history_dict: dict):
+    """Persist chat history dictionary across all subjects to disk (fail-safe)."""
+    _ensure_sessions_dir()
+    filepath = os.path.join(SESSIONS_DIR, f"{session_id}.json")
+    try:
+        with open(filepath, "w", encoding="utf-8") as f:
+            json.dump(history_dict, f, ensure_ascii=False, indent=2)
+    except Exception:
+        pass
 
 # ── Environment / API Key ─────────────────────────────────────────────────────
 # Priority: Streamlit Cloud secrets → .env file → environment variable
@@ -128,6 +163,13 @@ with st.sidebar:
     st.divider()
     st.markdown(f"**About {selected_subject_name}:**")
     st.caption(selected_cfg["description"])
+    st.divider()
+    if st.button("🗑️ Clear History for this Course", use_container_width=True):
+        if "subject_messages" in st.session_state and selected_subject_name in st.session_state.subject_messages:
+            st.session_state.subject_messages[selected_subject_name] = []
+            if "session_id" in st.session_state:
+                save_session_history(st.session_state.session_id, st.session_state.subject_messages)
+            st.rerun()
     st.divider()
     st.write("Made by Mwesigwa Mark")
 
@@ -264,12 +306,53 @@ st.markdown(
     [data-testid="stChatMessage"],
     [data-testid="stChatMessage"] p,
     [data-testid="stChatMessage"] li,
-    [data-testid="stChatMessage"] span {{
+    [data-testid="stChatMessage"] span,
+    [data-testid="stChatMessage"] h1,
+    [data-testid="stChatMessage"] h2,
+    [data-testid="stChatMessage"] h3,
+    [data-testid="stChatMessage"] h4,
+    [data-testid="stChatMessage"] h5,
+    [data-testid="stChatMessage"] h6,
+    [data-testid="stChatMessage"] td,
+    [data-testid="stChatMessage"] th,
+    [data-testid="stChatMessage"] strong,
+    [data-testid="stChatMessage"] em {{
         color: var(--text-main) !important;
     }}
     [data-testid="stChatMessage"] code {{
         background-color: var(--input-bg) !important;
         color: var(--text-main) !important;
+    }}
+
+    /* Markdown Tables (Fix for dark text/low contrast on tables inside chat) */
+    [data-testid="stChatMessage"] table,
+    .stMarkdown table {{
+        width: 100% !important;
+        border-collapse: collapse !important;
+        margin: 12px 0 !important;
+        color: var(--text-main) !important;
+        border: 1px solid var(--border-color) !important;
+        border-radius: 8px !important;
+        overflow: hidden !important;
+    }}
+    [data-testid="stChatMessage"] th,
+    [data-testid="stChatMessage"] td,
+    .stMarkdown th,
+    .stMarkdown td {{
+        color: var(--text-main) !important;
+        border: 1px solid var(--border-color) !important;
+        padding: 8px 12px !important;
+        text-align: left !important;
+        vertical-align: top !important;
+    }}
+    [data-testid="stChatMessage"] th,
+    .stMarkdown th {{
+        background-color: var(--input-bg) !important;
+        font-weight: 600 !important;
+    }}
+    [data-testid="stChatMessage"] tr:nth-child(even),
+    .stMarkdown tr:nth-child(even) {{
+        background-color: rgba(128, 128, 128, 0.08) !important;
     }}
 
     /* Bottom container (Chat Input area & sticky bar) */
@@ -361,15 +444,22 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# ── Session State — Subject Switching ────────────────────────────────────────
-if "active_subject" not in st.session_state:
-    st.session_state.active_subject = selected_subject_name
-    st.session_state.messages = []
+# ── Session & Storage Persistence (Survives Refresh & Subject Switching) ──────
+if "session_id" not in st.query_params:
+    session_id = str(uuid.uuid4())[:8]
+    st.query_params["session_id"] = session_id
+else:
+    session_id = st.query_params["session_id"]
 
-if st.session_state.active_subject != selected_subject_name:
-    st.session_state.active_subject = selected_subject_name
-    st.session_state.messages = []
-    st.rerun()
+st.session_state.session_id = session_id
+
+if "subject_messages" not in st.session_state:
+    st.session_state.subject_messages = load_session_history(session_id)
+
+if selected_subject_name not in st.session_state.subject_messages:
+    st.session_state.subject_messages[selected_subject_name] = []
+
+current_messages = st.session_state.subject_messages[selected_subject_name]
 
 # ── Intent Classifier (Bypass FAISS Retrieval for Casual Queries) ─────────────
 
@@ -492,7 +582,7 @@ def load_vector_store(faiss_dir: str, subject_name: str):
     """
     abs_path = (
         faiss_dir if os.path.isabs(faiss_dir)
-        else os.path.join(SCRIPT_DIR, faiss_dir)
+        else os.path.join(SCRIPT_DIR, os.path.normpath(faiss_dir))
     )
 
     if not os.path.isdir(abs_path):
@@ -524,14 +614,12 @@ def load_vector_store(faiss_dir: str, subject_name: str):
 
 
 @st.cache_resource(show_spinner=False)
-def setup_qa_chain(_vector_store, subject_prompt: str):
-    """Build and cache the LCEL QA chain for the given vector store and prompt.
+def setup_qa_components(_vector_store, subject_prompt: str) -> dict:
+    """Build and cache the QA retriever, prompt, and LLM components for the given vector store.
 
     Uses a history-aware retriever that reformulates follow-up questions into
     standalone queries before searching FAISS, so responses like 'explain each
     point you listed' correctly retrieve context from the right subject matter.
-
-    Returns a chain: {"input": str, "chat_history": list} → str (streamed).
     """
     api_key = os.getenv("GOOGLE_API_KEY")
     llm = ChatGoogleGenerativeAI(temperature=0, model="gemini-3.6-flash", google_api_key=api_key)
@@ -559,26 +647,36 @@ def setup_qa_chain(_vector_store, subject_prompt: str):
 
     answer_prompt = ChatPromptTemplate.from_template(subject_prompt)
 
-    def format_docs(docs):
-        return "\n\n".join(doc.page_content for doc in docs)
+    return {
+        "retriever": history_aware_retriever,
+        "prompt": answer_prompt,
+        "llm": llm,
+    }
 
-    # Chain: reformulate → retrieve → format context → answer prompt → LLM → str
-    qa_chain = (
-        RunnableParallel({
-            "context": lambda x: format_docs(
-                history_aware_retriever.invoke({
-                    "input": x["input"],
-                    "chat_history": x.get("chat_history", []),
-                })
-            ),
-            "input": lambda x: x["input"],
+
+def extract_citation_metadata(docs: list) -> list:
+    """Format metadata from retrieved Document objects into citation data for UI rendering."""
+    citations = []
+    for doc in docs:
+        meta = getattr(doc, "metadata", {}) or {}
+        raw_src = meta.get("source", "Course Materials")
+        src_name = os.path.basename(str(raw_src))
+        page_num = meta.get("page") if meta.get("page") is not None else meta.get("page_number")
+        
+        if isinstance(page_num, int):
+            page_str = f" (Page {page_num + 1})"
+        elif page_num:
+            page_str = f" (Page {page_num})"
+        else:
+            page_str = ""
+            
+        snippet = doc.page_content[:280].strip() + ("…" if len(doc.page_content) > 280 else "")
+        citations.append({
+            "source": src_name,
+            "page": page_str,
+            "snippet": snippet,
         })
-        | answer_prompt
-        | llm
-        | StrOutputParser()
-    )
-
-    return qa_chain
+    return citations
 
 
 def build_chat_history(messages: list) -> list:
@@ -619,32 +717,43 @@ if load_error:
     st.stop()
 
 try:
-    qa_chain = setup_qa_chain(vector_store, selected_cfg["prompt"])
+    qa_setup = setup_qa_components(vector_store, selected_cfg["prompt"])
+    if not isinstance(qa_setup, dict):
+        st.cache_resource.clear()
+        st.rerun()
 except Exception as exc:
     st.error(f"❌ Failed to set up the AI chain: {exc}")
     st.stop()
 
 # Welcome message (shown only when the chat is empty)
-if not st.session_state.messages:
+if not current_messages:
     st.success(
         f"Hi there 📊 I am **BSQE AI**, your study assistant for Bachelor of Science in Quantitative Economics. "
         f"Ready to assist with **{selected_subject_name}**. Ask any question below!"
     )
 
 # ── Chat History ──────────────────────────────────────────────────────────────
-for message in st.session_state.messages:
+for message in current_messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
+        if message.get("sources"):
+            with st.expander("📚 View Source Citations & Passages"):
+                for idx, src in enumerate(message["sources"], 1):
+                    st.markdown(f"**[{idx}] {src['source']}{src['page']}**")
+                    st.caption(f"\"{src['snippet']}\"")
 
 # ── Chat Input & Response ─────────────────────────────────────────────────────
 if user_prompt := st.chat_input(f"Ask a question about {selected_subject_name}…"):
-    st.session_state.messages.append({"role": "user", "content": user_prompt})
+    current_messages.append({"role": "user", "content": user_prompt})
+    save_session_history(session_id, st.session_state.subject_messages)
+
     with st.chat_message("user"):
         st.markdown(user_prompt)
 
     with st.chat_message("assistant"):
         message_placeholder = st.empty()
-        full_response = ""  # Ensure full_response is always defined (BUG-3 fix)
+        full_response = ""
+        current_sources = []
 
         try:
             # PATH A: Casual Greetings / Pleasantries (Bypasses FAISS Retrieval completely)
@@ -664,7 +773,7 @@ if user_prompt := st.chat_input(f"Ask a question about {selected_subject_name}�
 
                 # Find the last assistant message in chat history
                 last_assistant_msg = None
-                for msg in reversed(st.session_state.messages[:-1]):
+                for msg in reversed(current_messages[:-1]):
                     if msg["role"] == "assistant":
                         last_assistant_msg = msg["content"]
                         break
@@ -679,33 +788,45 @@ if user_prompt := st.chat_input(f"Ask a question about {selected_subject_name}�
                 else:
                     # Fallback if no prior answer exists: treat as standard RAG query with summary instruction
                     with st.spinner("Thinking…"):
+                        chat_history = build_chat_history(current_messages[:-1])
+                        retrieved_docs = qa_setup["retriever"].invoke({
+                            "input": user_prompt,
+                            "chat_history": chat_history,
+                        })
+                        context_str = "\n\n".join(doc.page_content for doc in retrieved_docs)
                         subject_prompt = (
                             selected_cfg["prompt"]
                             + "\n\nProvide a concise bullet-point summary for this topic."
                         )
                         prompt = ChatPromptTemplate.from_template(subject_prompt)
-                        retriever = vector_store.as_retriever(
-                            search_type="similarity",
-                            search_kwargs={"k": 5},
-                        )
-                        docs = retriever.invoke(user_prompt)
-                        context_str = "\n\n".join(doc.page_content for doc in docs)
                         formatted_prompt = prompt.format(context=context_str, input=user_prompt)
-                        response_stream = (llm | StrOutputParser()).stream(formatted_prompt)
+                        response_stream = (qa_setup["llm"] | StrOutputParser()).stream(formatted_prompt)
                         full_response = st.write_stream(response_stream)
+                        current_sources = extract_citation_metadata(retrieved_docs)
+                        if current_sources:
+                            with st.expander("📚 View Source Citations & Passages"):
+                                for idx, src in enumerate(current_sources, 1):
+                                    st.markdown(f"**[{idx}] {src['source']}{src['page']}**")
+                                    st.caption(f"\"{src['snippet']}\"")
 
             # PATH C: Standard Academic Course Questions (Full, Detailed, Step-by-Step Response by default)
             else:
                 with st.spinner("Thinking…"):
-                    # Build chat history (all messages before the current user prompt)
-                    # so the history-aware retriever can reformulate follow-up questions.
-                    chat_history = build_chat_history(st.session_state.messages[:-1])
-                    response_stream = qa_chain.stream({
+                    chat_history = build_chat_history(current_messages[:-1])
+                    retrieved_docs = qa_setup["retriever"].invoke({
                         "input": user_prompt,
                         "chat_history": chat_history,
                     })
+                    context_str = "\n\n".join(doc.page_content for doc in retrieved_docs)
+                    formatted_prompt = qa_setup["prompt"].format(context=context_str, input=user_prompt)
+                    response_stream = (qa_setup["llm"] | StrOutputParser()).stream(formatted_prompt)
                     full_response = st.write_stream(response_stream)
-
+                    current_sources = extract_citation_metadata(retrieved_docs)
+                    if current_sources:
+                        with st.expander("📚 View Source Citations & Passages"):
+                            for idx, src in enumerate(current_sources, 1):
+                                st.markdown(f"**[{idx}] {src['source']}{src['page']}**")
+                                st.caption(f"\"{src['snippet']}\"")
 
             if not full_response:
                 full_response = (
@@ -720,4 +841,8 @@ if user_prompt := st.chat_input(f"Ask a question about {selected_subject_name}�
             st.error(f"Error type: **{type(exc).__name__}**")
             message_placeholder.markdown(full_response)
 
-    st.session_state.messages.append({"role": "assistant", "content": full_response})
+    assistant_msg = {"role": "assistant", "content": full_response}
+    if current_sources:
+        assistant_msg["sources"] = current_sources
+    current_messages.append(assistant_msg)
+    save_session_history(session_id, st.session_state.subject_messages)

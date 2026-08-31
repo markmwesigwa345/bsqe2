@@ -1,0 +1,40 @@
+{
+  "Social Sector Statistics": [
+    {
+      "role": "user",
+      "content": "What is a sector?"
+    },
+    {
+      "role": "assistant",
+      "content": "Based on the course context, a **sector** is a major category or division of an economy—such as industry, transport, residential, commercial, or agriculture—used to group together entities with similar activities, energy consumption, and demand behaviors.\n\nKey aspects of sectors described in the context include:\n\n* **Homogeneity in Analysis:** Sectors are disaggregated into sub-sectors (e.g., splitting industry into mining, manufacturing, and construction) to enhance homogeneity when analyzing consumption patterns and demand behavior.\n* **Economic Interdependence:** Sectors are mutually dependent; each sector purchases inputs from and supplies outputs to other sectors to meet final demand (e.g., agriculture using inputs from the energy and industrial sectors).\n* **Grouping for Accounting:** Because of data limitations, sectors with similar characteristics are sometimes combined in energy balances (e.g., grouping residential and commercial sectors into an \"other\" sector). \n\n*(Note: While the provided context illustrates how sectors are categorized, disaggregated, and measured in energy balance and input-output accounts, it does not give a single formal definition of the term itself.)*",
+      "sources": [
+        {
+          "source": "Course Materials",
+          "page": "",
+          "snippet": "sectors: industry, transport, residential, commercial, agriculture and non-energy\nuses. However, very often because of data limitations, residential and commercial\nsectors are grouped together. In some tables, agriculture is combined with the\nresidential-commercial sectors to giv…"
+        },
+        {
+          "source": "Course Materials",
+          "page": "",
+          "snippet": "purpose of the study. Detailed sector level information requires additional sources\nof information. For the industrial sector, major sources like the IEA provides at the\n2-digit level of industrial classiﬁcation but for other sectors, data has to be gather\nfrom surveys and other…"
+        },
+        {
+          "source": "Course Materials",
+          "page": "",
+          "snippet": "Global level  \nCoal  Oil  Gas Hydro Electricity  Renewable \nMacro level \nSector\nlevel  \nPlant 1 \nPlant 2 \nInstitutions \nPlant n \nGlobal \nInstitutions \nSector level \ninstitutions  \nFig. 1.1 Multidimensional interaction of the energy sector\n1.2 Energy and Multidimensional Interacti…"
+        },
+        {
+          "source": "Course Materials",
+          "page": "",
+          "snippet": "the main activities. The interdependence of one sector on the other is indicated\nthrough purchases from other sectors (see Table 5.6). In this table, a column entry\nindicates the purchase of one sector from the others. For example, the agriculture\nsector uses $10 from agriculture…"
+        },
+        {
+          "source": "Course Materials",
+          "page": "",
+          "snippet": "cannot be ignored either. This so-called market failure argument is used to justify\ngovernment intervention in the energy sector. Consequently, the government\npresence in the sector is quite widespread, both in developed and developing\ncountries, despite waves of liberalization o…"
+        }
+      ]
+    }
+  ],
+  "Micro Economics": []
+}
