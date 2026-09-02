@@ -707,12 +707,12 @@ def stream_with_retry(chain, prompt_input, max_retries: int = 3, base_delay: int
     last_exc = None
     for attempt in range(max_retries):
         try:
-            return st.write_stream(chain.stream(prompt_input))
+            return chain.invoke(prompt_input)
         except Exception as e:
             msg = str(e).lower()
             is_retryable = any(
                 code in msg for code in
-                ["503", "unavailable", "429", "resource_exhausted", "overloaded", "deadline"]
+                ["503", "unavailable", "overloaded", "deadline"]
             )
             last_exc = e
             if is_retryable and attempt < max_retries - 1:
@@ -868,10 +868,15 @@ if user_prompt := st.chat_input(f"Ask a question about {selected_subject_name}�
 
         except Exception as exc:
             msg = str(exc).lower()
-            if any(code in msg for code in ["503", "unavailable", "429", "resource_exhausted", "overloaded"]):
+            if any(code in msg for code in ["503", "unavailable", "overloaded"]):
                 full_response = (
                     "⏳ **Gemini is experiencing high demand right now.** "
                     "I retried a few times but couldn't get through — please wait a moment and try again."
+                )
+            elif any(code in msg for code in ["429", "resource_exhausted", "quota"]):
+                full_response = (
+                    "🚦 **API quota exceeded.** You've hit your Gemini rate limit — "
+                    "wait about a minute before trying again, or check your quota at aistudio.google.com."
                 )
             else:
                 full_response = (
