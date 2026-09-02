@@ -1,0 +1,39 @@
+{
+  "Social Sector Statistics": [
+    {
+      "role": "user",
+      "content": "what is energy demand?"
+    },
+    {
+      "role": "assistant",
+      "content": "**Energy demand** describes the economic relationship between a variable (such as price or income) and the quantity of energy desired—either for an energy carrier (e.g., electricity) or for final use (e.g., cooking). \n\nBased on the course material, energy demand is characterized by the following key features:\n\n* **It is an *ex-ante* concept:** Energy demand exists *before* a purchasing decision is made, indicating the quantities of energy that would be purchased at given prices. In contrast, **energy consumption** is an *ex-post* concept representing the actual, satisfied demand that can be measured.\n* **It is a derived demand:** Energy is not consumed for its own sake, but rather through equipment to achieve an ulterior purpose—such as mobility, heating/comfort, or producing goods and services.\n* **Microeconomic foundations:**  * **Households** demand energy to satisfy needs by allocating their income to achieve maximum satisfaction from their total expenditure.\n  * **Industries and commercial users** demand energy as an input of production with the objective of minimizing total production costs.",
+      "sources": [
+        {
+          "source": "Course Materials",
+          "page": "",
+          "snippet": "the demand for energy is not different from that for any other commodity. There\n1 This section relies on Bohi ( 1981), Chapter 2, Estimating the demand for energy: Issues\nand Methodologies. Similar treatments are also provided in Hartman ( 1979), Munasinghe\nand Meier ( 1993)\n46 3…"
+        },
+        {
+          "source": "Course Materials",
+          "page": "",
+          "snippet": "the manifestation of satisﬁed demand and can be measured. However, demand and\nconsumption are used interchangeably in this chapter despite their subtle\ndifferences.\nS. C. Bhattacharyya, Energy Economics, DOI: 10.1007/978-0-85729-268-1_3,\n/C211 Springer-Verlag London Limited 2011…"
+        },
+        {
+          "source": "Course Materials",
+          "page": "",
+          "snippet": "second most important energy demand centre in the world with a share of 38% of\nthe global demand.\nAs fossil fuels continue to dominate the future energy scene, the supply-related\nconcerns (due to the uneven distribution of resource endowments, infrastructure\nrelated constraints a…"
+        },
+        {
+          "source": "Course Materials",
+          "page": "",
+          "snippet": "the underlying factors affecting energy demand. Various analytical methods are\nused to analyze energy demand. Three approaches are presented below: simple\ndescriptive analysis, factor (or decomposition) analysis, and econometric analysis.\n3.5.1 Descriptive Analysis 4\nHere we pres…"
+        },
+        {
+          "source": "Course Materials",
+          "page": "",
+          "snippet": "the term clearly whenever used.\nA distinction is sometimes made between energy consumption and energy\ndemand. Energy demand describes a relationship between price (or income or\nsome such economic variable) and quantity of energy either for an energy carrier\n(e.g. electricity) or…"
+        }
+      ]
+    }
+  ]
+}

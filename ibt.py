@@ -15,6 +15,7 @@ import json
 import os
 import re
 import uuid
+import time
 import streamlit as st
 from dotenv import load_dotenv
 
@@ -563,8 +564,10 @@ def load_llm() -> ChatGoogleGenerativeAI:
     """Load and cache the Gemini LLM (built once, reused on every message)."""
     return ChatGoogleGenerativeAI(
         temperature=0,
-        model="gemini-3.6-flash",
+        model="gemini-3.7-flash",
         google_api_key=os.getenv("GOOGLE_API_KEY"),
+        max_retries=5,
+        timeout=60,
     )
 
 
@@ -622,7 +625,13 @@ def setup_qa_components(_vector_store, subject_prompt: str) -> dict:
     point you listed' correctly retrieve context from the right subject matter.
     """
     api_key = os.getenv("GOOGLE_API_KEY")
-    llm = ChatGoogleGenerativeAI(temperature=0, model="gemini-3.6-flash", google_api_key=api_key)
+    llm = ChatGoogleGenerativeAI(
+        temperature=0,
+        model="gemini-3.7-flash",
+        google_api_key=api_key,
+        max_retries=5,
+        timeout=60,
+    )
 
     retriever = _vector_store.as_retriever(
         search_type="similarity",
@@ -689,6 +698,30 @@ def build_chat_history(messages: list) -> list:
         elif msg["role"] == "assistant":
             history.append(AIMessage(content=msg["content"]))
     return history
+
+
+def stream_with_retry(chain, prompt_input, max_retries: int = 3, base_delay: int = 2):
+    """Stream a response from an LLM chain, retrying on transient server-side
+    errors (503 overloaded, 429 rate-limited) with exponential backoff.
+    Re-raises the last error if all retries are exhausted."""
+    last_exc = None
+    for attempt in range(max_retries):
+        try:
+            return st.write_stream(chain.stream(prompt_input))
+        except Exception as e:
+            msg = str(e).lower()
+            is_retryable = any(
+                code in msg for code in
+                ["503", "unavailable", "429", "resource_exhausted", "overloaded", "deadline"]
+            )
+            last_exc = e
+            if is_retryable and attempt < max_retries - 1:
+                wait = base_delay * (2 ** attempt)
+                st.toast(f"⏳ Gemini is busy — retrying in {wait}s (attempt {attempt + 1}/{max_retries})")
+                time.sleep(wait)
+                continue
+            raise
+    raise last_exc
 
 # ── Main App ──────────────────────────────────────────────────────────────────
 
@@ -764,8 +797,7 @@ if user_prompt := st.chat_input(f"Ask a question about {selected_subject_name}�
                     f"currently helping with {selected_subject_name}.\n\n"
                     f"Respond warmly, naturally, and concisely to this user greeting: '{user_prompt}'."
                 )
-                response_stream = (llm | StrOutputParser()).stream(greeting_prompt)
-                full_response = st.write_stream(response_stream)
+                full_response = stream_with_retry(llm | StrOutputParser(), greeting_prompt)
 
             # PATH B: Explicit User Summarization Request (Summarizes previous answer if available)
             elif is_summarization_request(user_prompt):
@@ -783,8 +815,7 @@ if user_prompt := st.chat_input(f"Ask a question about {selected_subject_name}�
                         f"You are BSQE2 AI. Summarize the following answer clearly into concise bullet points, "
                         f"highlighting key definitions and main takeaways:\n\n{last_assistant_msg}"
                     )
-                    response_stream = (llm | StrOutputParser()).stream(summary_prompt)
-                    full_response = st.write_stream(response_stream)
+                    full_response = stream_with_retry(llm | StrOutputParser(), summary_prompt)
                 else:
                     # Fallback if no prior answer exists: treat as standard RAG query with summary instruction
                     with st.spinner("Thinking…"):
@@ -800,8 +831,7 @@ if user_prompt := st.chat_input(f"Ask a question about {selected_subject_name}�
                         )
                         prompt = ChatPromptTemplate.from_template(subject_prompt)
                         formatted_prompt = prompt.format(context=context_str, input=user_prompt)
-                        response_stream = (qa_setup["llm"] | StrOutputParser()).stream(formatted_prompt)
-                        full_response = st.write_stream(response_stream)
+                        full_response = stream_with_retry(qa_setup["llm"] | StrOutputParser(), formatted_prompt)
                         current_sources = extract_citation_metadata(retrieved_docs)
                         if current_sources:
                             with st.expander("📚 View Source Citations & Passages"):
@@ -819,8 +849,7 @@ if user_prompt := st.chat_input(f"Ask a question about {selected_subject_name}�
                     })
                     context_str = "\n\n".join(doc.page_content for doc in retrieved_docs)
                     formatted_prompt = qa_setup["prompt"].format(context=context_str, input=user_prompt)
-                    response_stream = (qa_setup["llm"] | StrOutputParser()).stream(formatted_prompt)
-                    full_response = st.write_stream(response_stream)
+                    full_response = stream_with_retry(qa_setup["llm"] | StrOutputParser(), formatted_prompt)
                     current_sources = extract_citation_metadata(retrieved_docs)
                     if current_sources:
                         with st.expander("📚 View Source Citations & Passages"):
@@ -835,9 +864,16 @@ if user_prompt := st.chat_input(f"Ask a question about {selected_subject_name}�
                 )
 
         except Exception as exc:
-            full_response = (
-                f"❌ An error occurred: `{exc}`\n\nPlease try again later."
-            )
+            msg = str(exc).lower()
+            if any(code in msg for code in ["503", "unavailable", "429", "resource_exhausted", "overloaded"]):
+                full_response = (
+                    "⏳ **Gemini is experiencing high demand right now.** "
+                    "I retried a few times but couldn't get through — please wait a moment and try again."
+                )
+            else:
+                full_response = (
+                    f"❌ An error occurred: `{exc}`\n\nPlease try again later."
+                )
             st.error(f"Error type: **{type(exc).__name__}**")
             message_placeholder.markdown(full_response)
 
