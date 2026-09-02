@@ -1,0 +1,12 @@
+{
+  "Social Sector Statistics": [
+    {
+      "role": "user",
+      "content": "hello"
+    },
+    {
+      "role": "assistant",
+      "content": "Hello! Great to connect with you. \n\nI’m ready to help you navigate Social Sector Statistics—whether you're working through poverty and inequality indices, demographic indicators, or human development metrics. \n\nWhat topic or problem would you like to tackle today?"
+    }
+  ]
+}

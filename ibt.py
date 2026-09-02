@@ -564,7 +564,7 @@ def load_llm() -> ChatGoogleGenerativeAI:
     """Load and cache the Gemini LLM (built once, reused on every message)."""
     return ChatGoogleGenerativeAI(
         temperature=0,
-        model="gemini-3.7-flash",
+        model="gemini-3.6-flash",
         google_api_key=os.getenv("GOOGLE_API_KEY"),
         max_retries=2,
         timeout=20,
@@ -627,7 +627,7 @@ def setup_qa_components(_vector_store, subject_prompt: str) -> dict:
     api_key = os.getenv("GOOGLE_API_KEY")
     llm = ChatGoogleGenerativeAI(
         temperature=0,
-        model="gemini-3.7-flash",
+        model="gemini-3.6-flash",
         google_api_key=api_key,
         max_retries=2,
         timeout=20,
@@ -883,7 +883,8 @@ if user_prompt := st.chat_input(f"Ask a question about {selected_subject_name}‚Ä
                     f"‚ùå An error occurred: `{exc}`\n\nPlease try again later."
                 )
             st.error(f"Error type: **{type(exc).__name__}**")
-            message_placeholder.markdown(full_response)
+
+        message_placeholder.markdown(full_response)
 
     assistant_msg = {"role": "assistant", "content": full_response}
     if current_sources:

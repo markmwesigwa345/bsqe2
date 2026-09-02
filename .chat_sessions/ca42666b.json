@@ -1,0 +1,12 @@
+{
+  "Social Sector Statistics": [
+    {
+      "role": "user",
+      "content": "hello"
+    },
+    {
+      "role": "assistant",
+      "content": "❌ An error occurred: `404 This model models/gemini-2.5-flash is no longer available to new users. Please update your code to use models/gemini-3.6-flash for the latest features and improvements. We recommend you to use the Interactions API.`\n\nPlease try again later."
+    }
+  ]
+}

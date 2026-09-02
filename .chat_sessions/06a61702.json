@@ -1,0 +1,12 @@
+{
+  "Social Sector Statistics": [
+    {
+      "role": "user",
+      "content": "hello"
+    },
+    {
+      "role": "assistant",
+      "content": "Hello! Welcome. I'm ready to help you dive into Social Sector Statistics. What topic, dataset, or concept are we tackling today?"
+    }
+  ]
+}
