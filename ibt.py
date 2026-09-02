@@ -566,8 +566,8 @@ def load_llm() -> ChatGoogleGenerativeAI:
         temperature=0,
         model="gemini-3.7-flash",
         google_api_key=os.getenv("GOOGLE_API_KEY"),
-        max_retries=5,
-        timeout=60,
+        max_retries=2,
+        timeout=20,
     )
 
 
@@ -629,13 +629,13 @@ def setup_qa_components(_vector_store, subject_prompt: str) -> dict:
         temperature=0,
         model="gemini-3.7-flash",
         google_api_key=api_key,
-        max_retries=5,
-        timeout=60,
+        max_retries=2,
+        timeout=20,
     )
 
     retriever = _vector_store.as_retriever(
         search_type="similarity",
-        search_kwargs={"k": 5},
+        search_kwargs={"k": 4},
     )
 
     # Reformulation prompt: condenses chat history + current question into one
@@ -700,7 +700,7 @@ def build_chat_history(messages: list) -> list:
     return history
 
 
-def stream_with_retry(chain, prompt_input, max_retries: int = 3, base_delay: int = 2):
+def stream_with_retry(chain, prompt_input, max_retries: int = 3, base_delay: int = 1):
     """Stream a response from an LLM chain, retrying on transient server-side
     errors (503 overloaded, 429 rate-limited) with exponential backoff.
     Re-raises the last error if all retries are exhausted."""
@@ -843,10 +843,13 @@ if user_prompt := st.chat_input(f"Ask a question about {selected_subject_name}â€
             else:
                 with st.spinner("Thinkingâ€¦"):
                     chat_history = build_chat_history(current_messages[:-1])
-                    retrieved_docs = qa_setup["retriever"].invoke({
-                        "input": user_prompt,
-                        "chat_history": chat_history,
-                    })
+                    if chat_history:
+                        retrieved_docs = qa_setup["retriever"].invoke({
+                            "input": user_prompt,
+                            "chat_history": chat_history,
+                        })
+                    else:
+                        retrieved_docs = vector_store.similarity_search(user_prompt, k=4)
                     context_str = "\n\n".join(doc.page_content for doc in retrieved_docs)
                     formatted_prompt = qa_setup["prompt"].format(context=context_str, input=user_prompt)
                     full_response = stream_with_retry(qa_setup["llm"] | StrOutputParser(), formatted_prompt)
