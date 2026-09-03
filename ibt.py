@@ -291,9 +291,12 @@ st.markdown(
         fill: var(--accent-color) !important;
     }}
 
-    /* Spinners */
-    [data-testid="stSpinner"] p {{
-        color: var(--text-main) !important;
+    /* Hide native yellow spinner — make SVG stroke transparent, hide label */
+    [data-testid="stSpinner"] svg circle {{
+        stroke: transparent !important;
+    }}
+    [data-testid="stSpinner"] > div > p {{
+        display: none !important;
     }}
 
     /* Chat message cards */
@@ -323,6 +326,131 @@ st.markdown(
     [data-testid="stChatMessage"] code {{
         background-color: var(--input-bg) !important;
         color: var(--text-main) !important;
+    }}
+
+    /* Vibrant BSQE2 avatar badge — replaces Streamlit's default icon
+       in place. font-size:0 blanks out ANY native content (emoji,
+       text, image) so nothing leaks through behind our own label. */
+    [data-testid="stChatMessageAvatarAssistant"] {{
+        background: linear-gradient(135deg, {t["accent"]} 0%, #1e40af 100%) !important;
+        border: none !important;
+        border-radius: 50% !important;
+        box-shadow:
+            0 2px 10px rgba(37, 99, 235, 0.45),
+            0 0 0 3px rgba(37, 99, 235, 0.12) !important;
+        align-items: center !important;
+        justify-content: center !important;
+        overflow: hidden !important;
+        font-size: 0 !important;
+        color: transparent !important;
+    }}
+    [data-testid="stChatMessageAvatarAssistant"] * {{
+        display: none !important;
+    }}
+    [data-testid="stChatMessageAvatarAssistant"]::after {{
+        content: "BSQE2";
+        display: block;
+        color: #FFFFFF;
+        font-weight: 800;
+        font-size: 6px;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1;
+        letter-spacing: 0.3px;
+        white-space: nowrap;
+        animation: bsqe2-badge-glow 2.4s ease-in-out infinite;
+    }}
+
+    /* Safety net: hide any second avatar variant Streamlit renders in the same row */
+    [data-testid="stChatMessageAvatarAssistant"] ~ [data-testid="stChatMessageAvatarAssistant"] {{
+        display: none !important;
+    }}
+
+    @keyframes bsqe2-badge-glow {{
+        0%, 100%  {{ text-shadow: 0 0 3px rgba(255,255,255,0.25); opacity: 0.92; }}
+        50%       {{ text-shadow: 0 0 8px rgba(255,255,255,0.9);  opacity: 1;    }}
+    }}
+    @keyframes bsqe2-badge-pulse-active {{
+        0%, 100% {{ transform: scale(1);    box-shadow: 0 2px 10px rgba(37,99,235,0.45), 0 0 0 3px rgba(37,99,235,0.12); }}
+        50%      {{ transform: scale(1.12); box-shadow: 0 2px 16px rgba(37,99,235,0.7), 0 0 0 6px rgba(37,99,235,0.18); }}
+    }}
+    .stChatMessage:has([data-testid="stSpinner"]) [data-testid="stChatMessageAvatarAssistant"],
+    [data-testid="stChatMessageAvatarAssistant"]:has(+ * [data-testid="stSpinner"]) {{
+        animation: bsqe2-badge-pulse-active 1s ease-in-out infinite !important;
+    }}
+        0%, 100%  {{ text-shadow: 0 0 3px rgba(255,255,255,0.25); opacity: 0.92; }}
+        50%       {{ text-shadow: 0 0 8px rgba(255,255,255,0.9);  opacity: 1;    }}
+    }}
+    @keyframes bsqe2-badge-pulse-active {{
+        0%, 100% {{ transform: scale(1);    box-shadow: 0 2px 10px rgba(37,99,235,0.45), 0 0 0 3px rgba(37,99,235,0.12); }}
+        50%      {{ transform: scale(1.12); box-shadow: 0 2px 16px rgba(37,99,235,0.7), 0 0 0 6px rgba(37,99,235,0.18); }}
+    }}
+    .stChatMessage:has([data-testid="stSpinner"]) [data-testid="stChatMessageAvatarAssistant"],
+    [data-testid="stChatMessageAvatarAssistant"]:has(+ * [data-testid="stSpinner"]) {{
+        animation: bsqe2-badge-pulse-active 1s ease-in-out infinite !important;
+    }}
+    @keyframes bsqe2-badge-pulse-active {{
+        0%, 100% {{ transform: scale(1);    box-shadow: 0 2px 10px rgba(37,99,235,0.45), 0 0 0 3px rgba(37,99,235,0.12); }}
+        50%      {{ transform: scale(1.12); box-shadow: 0 2px 16px rgba(37,99,235,0.7), 0 0 0 6px rgba(37,99,235,0.18); }}
+    }}
+    .stChatMessage:has([data-testid="stSpinner"]) [data-testid="stChatMessageAvatarAssistant"],
+    [data-testid="stChatMessageAvatarAssistant"]:has(+ * [data-testid="stSpinner"]) {{
+        animation: bsqe2-badge-pulse-active 1s ease-in-out infinite !important;
+    }}
+    @keyframes bsqe2-badge-pulse-active {{
+        0%, 100% {{ transform: scale(1);    box-shadow: 0 2px 10px rgba(37,99,235,0.45), 0 0 0 3px rgba(37,99,235,0.12); }}
+        50%      {{ transform: scale(1.12); box-shadow: 0 2px 16px rgba(37,99,235,0.7), 0 0 0 6px rgba(37,99,235,0.18); }}
+    }}
+    .stChatMessage:has([data-testid="stSpinner"]) [data-testid="stChatMessageAvatarAssistant"],
+    [data-testid="stChatMessageAvatarAssistant"]:has(+ * [data-testid="stSpinner"]) {{
+        animation: bsqe2-badge-pulse-active 1s ease-in-out infinite !important;
+    }}
+    @keyframes bsqe2-badge-pulse-active {{
+        0%, 100% {{ transform: scale(1);    box-shadow: 0 2px 10px rgba(37,99,235,0.45), 0 0 0 3px rgba(37,99,235,0.12); }}
+        50%      {{ transform: scale(1.12); box-shadow: 0 2px 16px rgba(37,99,235,0.7), 0 0 0 6px rgba(37,99,235,0.18); }}
+    }}
+    .stChatMessage:has([data-testid="stSpinner"]) [data-testid="stChatMessageAvatarAssistant"],
+    [data-testid="stChatMessageAvatarAssistant"]:has(+ * [data-testid="stSpinner"]) {{
+        animation: bsqe2-badge-pulse-active 1s ease-in-out infinite !important;
+    }}
+    @keyframes bsqe2-badge-pulse-active {{
+        0%, 100% {{ transform: scale(1);    box-shadow: 0 2px 10px rgba(37,99,235,0.45), 0 0 0 3px rgba(37,99,235,0.12); }}
+        50%      {{ transform: scale(1.12); box-shadow: 0 2px 16px rgba(37,99,235,0.7), 0 0 0 6px rgba(37,99,235,0.18); }}
+    }}
+    .stChatMessage:has([data-testid="stSpinner"]) [data-testid="stChatMessageAvatarAssistant"],
+    [data-testid="stChatMessageAvatarAssistant"]:has(+ * [data-testid="stSpinner"]) {{
+        animation: bsqe2-badge-pulse-active 1s ease-in-out infinite !important;
+    }}
+    @keyframes bsqe2-badge-pulse-active {{
+        0%, 100% {{ transform: scale(1);    box-shadow: 0 2px 10px rgba(37,99,235,0.45), 0 0 0 3px rgba(37,99,235,0.12); }}
+        50%      {{ transform: scale(1.12); box-shadow: 0 2px 16px rgba(37,99,235,0.7), 0 0 0 6px rgba(37,99,235,0.18); }}
+    }}
+    .stChatMessage:has([data-testid="stSpinner"]) [data-testid="stChatMessageAvatarAssistant"],
+    [data-testid="stChatMessageAvatarAssistant"]:has(+ * [data-testid="stSpinner"]) {{
+        animation: bsqe2-badge-pulse-active 1s ease-in-out infinite !important;
+    }}
+    @keyframes bsqe2-badge-pulse-active {{
+        0%, 100% {{ transform: scale(1);    box-shadow: 0 2px 10px rgba(37,99,235,0.45), 0 0 0 3px rgba(37,99,235,0.12); }}
+        50%      {{ transform: scale(1.12); box-shadow: 0 2px 16px rgba(37,99,235,0.7), 0 0 0 6px rgba(37,99,235,0.18); }}
+    }}
+    .stChatMessage:has([data-testid="stSpinner"]) [data-testid="stChatMessageAvatarAssistant"],
+    [data-testid="stChatMessageAvatarAssistant"]:has(+ * [data-testid="stSpinner"]) {{
+        animation: bsqe2-badge-pulse-active 1s ease-in-out infinite !important;
+    }}
+    @keyframes bsqe2-badge-pulse-active {{
+        0%, 100% {{ transform: scale(1);    box-shadow: 0 2px 10px rgba(37,99,235,0.45), 0 0 0 3px rgba(37,99,235,0.12); }}
+        50%      {{ transform: scale(1.12); box-shadow: 0 2px 16px rgba(37,99,235,0.7), 0 0 0 6px rgba(37,99,235,0.18); }}
+    }}
+    .stChatMessage:has([data-testid="stSpinner"]) [data-testid="stChatMessageAvatarAssistant"],
+    [data-testid="stChatMessageAvatarAssistant"]:has(+ * [data-testid="stSpinner"]) {{
+        animation: bsqe2-badge-pulse-active 1s ease-in-out infinite !important;
+    }}
+    @keyframes bsqe2-badge-pulse-active {{
+        0%, 100% {{ transform: scale(1);    box-shadow: 0 2px 10px rgba(37,99,235,0.45), 0 0 0 3px rgba(37,99,235,0.12); }}
+        50%      {{ transform: scale(1.12); box-shadow: 0 2px 16px rgba(37,99,235,0.7), 0 0 0 6px rgba(37,99,235,0.18); }}
+    }}
+    .stChatMessage:has([data-testid="stSpinner"]) [data-testid="stChatMessageAvatarAssistant"],
+    [data-testid="stChatMessageAvatarAssistant"]:has(+ * [data-testid="stSpinner"]) {{
+        animation: bsqe2-badge-pulse-active 1s ease-in-out infinite !important;
     }}
 
     /* Markdown Tables (Fix for dark text/low contrast on tables inside chat) */
@@ -563,7 +691,7 @@ def load_embeddings() -> HuggingFaceEmbeddings:
 def load_llm() -> ChatGoogleGenerativeAI:
     """Load and cache the Gemini LLM (built once, reused on every message)."""
     return ChatGoogleGenerativeAI(
-        temperature=0,
+        temperature=0.1,
         model="gemini-3.6-flash",
         google_api_key=os.getenv("GOOGLE_API_KEY"),
         max_retries=2,
@@ -626,7 +754,7 @@ def setup_qa_components(_vector_store, subject_prompt: str) -> dict:
     """
     api_key = os.getenv("GOOGLE_API_KEY")
     llm = ChatGoogleGenerativeAI(
-        temperature=0,
+        temperature=0.1,
         model="gemini-3.6-flash",
         google_api_key=api_key,
         max_retries=2,
@@ -634,8 +762,8 @@ def setup_qa_components(_vector_store, subject_prompt: str) -> dict:
     )
 
     retriever = _vector_store.as_retriever(
-        search_type="similarity",
-        search_kwargs={"k": 4},
+        search_type="mmr",
+        search_kwargs={"k": 5, "fetch_k": 20},
     )
 
     # Reformulation prompt: condenses chat history + current question into one
@@ -692,7 +820,7 @@ def build_chat_history(messages: list) -> list:
     """Convert st.session_state.messages into LangChain HumanMessage/AIMessage
     objects so the history-aware retriever can read conversation context."""
     history = []
-    for msg in messages:
+    for msg in messages[-6:]:
         if msg["role"] == "user":
             history.append(HumanMessage(content=msg["content"]))
         elif msg["role"] == "assistant":
@@ -700,14 +828,49 @@ def build_chat_history(messages: list) -> list:
     return history
 
 
-def stream_with_retry(chain, prompt_input, max_retries: int = 3, base_delay: int = 1):
-    """Stream a response from an LLM chain, retrying on transient server-side
-    errors (503 overloaded, 429 rate-limited) with exponential backoff.
-    Re-raises the last error if all retries are exhausted."""
+
+def show_thinking_indicator(placeholder):
+    placeholder.markdown(
+        """
+        <span style="color:#9CA3AF;font-size:13px;font-style:italic;">
+            thinking…
+        </span>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+_CONTEXT_REF_RE = re.compile(
+    r"\b(it|its|this|that|these|those|they|them|their|he|she|his|her"
+    r"|the above|the previous|you mentioned|you said|elaborate|expand|more detail"
+    r"|explain more|tell me more|what about|how about|why is that|what does that mean)"
+    r"\b",
+    re.IGNORECASE,
+)
+
+def needs_reformulation(text: str, has_history: bool) -> bool:
+    """Return True only when the query references prior context and a reformulation
+    LLM call is actually needed. Avoids the extra Gemini round-trip for fresh questions."""
+    if not has_history:
+        return False
+    return bool(_CONTEXT_REF_RE.search(text))
+
+
+def stream_with_retry(chain, prompt_input, placeholder, max_retries: int = 3, base_delay: int = 1):
+    """Stream into a Streamlit placeholder with throttled DOM updates (every 20 tokens)
+    and exponential-backoff retry on transient errors. Returns the full response string."""
     last_exc = None
     for attempt in range(max_retries):
         try:
-            return chain.invoke(prompt_input)
+            full = ""
+            buf = 0
+            for chunk in chain.stream(prompt_input):
+                full += chunk
+                buf += 1
+                if buf == 1 or buf % 20 == 0:
+                    placeholder.markdown(full + "▌")
+            placeholder.markdown(full)
+            return full
         except Exception as e:
             msg = str(e).lower()
             is_retryable = any(
@@ -787,9 +950,10 @@ if user_prompt := st.chat_input(f"Ask a question about {selected_subject_name}�
         message_placeholder = st.empty()
         full_response = ""
         current_sources = []
+        show_thinking_indicator(message_placeholder)
 
         try:
-            # PATH A: Casual Greetings / Pleasantries (Bypasses FAISS Retrieval completely)
+            # PATH A: Casual Greetings / Pleasantries
             if is_conversational_query(user_prompt):
                 llm = load_llm()
                 greeting_prompt = (
@@ -797,13 +961,11 @@ if user_prompt := st.chat_input(f"Ask a question about {selected_subject_name}�
                     f"currently helping with {selected_subject_name}.\n\n"
                     f"Respond warmly, naturally, and concisely to this user greeting: '{user_prompt}'."
                 )
-                full_response = stream_with_retry(llm | StrOutputParser(), greeting_prompt)
+                full_response = stream_with_retry(llm | StrOutputParser(), greeting_prompt, message_placeholder)
 
-            # PATH B: Explicit User Summarization Request (Summarizes previous answer if available)
+            # PATH B: Explicit User Summarization Request
             elif is_summarization_request(user_prompt):
                 llm = load_llm()
-
-                # Find the last assistant message in chat history
                 last_assistant_msg = None
                 for msg in reversed(current_messages[:-1]):
                     if msg["role"] == "assistant":
@@ -815,50 +977,44 @@ if user_prompt := st.chat_input(f"Ask a question about {selected_subject_name}�
                         f"You are BSQE2 AI. Summarize the following answer clearly into concise bullet points, "
                         f"highlighting key definitions and main takeaways:\n\n{last_assistant_msg}"
                     )
-                    full_response = stream_with_retry(llm | StrOutputParser(), summary_prompt)
+                    full_response = stream_with_retry(llm | StrOutputParser(), summary_prompt, message_placeholder)
                 else:
-                    # Fallback if no prior answer exists: treat as standard RAG query with summary instruction
-                    with st.spinner("Thinking…"):
-                        chat_history = build_chat_history(current_messages[:-1])
-                        retrieved_docs = qa_setup["retriever"].invoke({
-                            "input": user_prompt,
-                            "chat_history": chat_history,
-                        })
-                        context_str = "\n\n".join(doc.page_content for doc in retrieved_docs)
-                        subject_prompt = (
-                            selected_cfg["prompt"]
-                            + "\n\nProvide a concise bullet-point summary for this topic."
-                        )
-                        prompt = ChatPromptTemplate.from_template(subject_prompt)
-                        formatted_prompt = prompt.format(context=context_str, input=user_prompt)
-                        full_response = stream_with_retry(qa_setup["llm"] | StrOutputParser(), formatted_prompt)
-                        current_sources = extract_citation_metadata(retrieved_docs)
-                        if current_sources:
-                            with st.expander("📚 View Source Citations & Passages"):
-                                for idx, src in enumerate(current_sources, 1):
-                                    st.markdown(f"**[{idx}] {src['source']}{src['page']}**")
-                                    st.caption(f"\"{src['snippet']}\"")
-
-            # PATH C: Standard Academic Course Questions (Full, Detailed, Step-by-Step Response by default)
-            else:
-                with st.spinner("Thinking…"):
                     chat_history = build_chat_history(current_messages[:-1])
-                    if chat_history:
-                        retrieved_docs = qa_setup["retriever"].invoke({
-                            "input": user_prompt,
-                            "chat_history": chat_history,
-                        })
-                    else:
-                        retrieved_docs = vector_store.similarity_search(user_prompt, k=4)
-                    context_str = "\n\n".join(doc.page_content for doc in retrieved_docs)
-                    formatted_prompt = qa_setup["prompt"].format(context=context_str, input=user_prompt)
-                    full_response = stream_with_retry(qa_setup["llm"] | StrOutputParser(), formatted_prompt)
+                    retrieved_docs = qa_setup["retriever"].invoke({
+                        "input": user_prompt,
+                        "chat_history": chat_history,
+                    })
+                    context_str = "\n\n".join(f"[Chunk {i}]\n{doc.page_content}" for i, doc in enumerate(retrieved_docs, 1))
+                    subject_prompt = selected_cfg["prompt"] + "\n\nProvide a concise bullet-point summary for this topic."
+                    prompt = ChatPromptTemplate.from_template(subject_prompt)
+                    formatted_prompt = prompt.format(context=context_str, input=user_prompt)
+                    full_response = stream_with_retry(qa_setup["llm"] | StrOutputParser(), formatted_prompt, message_placeholder)
                     current_sources = extract_citation_metadata(retrieved_docs)
                     if current_sources:
                         with st.expander("📚 View Source Citations & Passages"):
                             for idx, src in enumerate(current_sources, 1):
                                 st.markdown(f"**[{idx}] {src['source']}{src['page']}**")
                                 st.caption(f"\"{src['snippet']}\"")
+
+            # PATH C: Standard Academic Course Questions
+            else:
+                chat_history = build_chat_history(current_messages[:-1])
+                if needs_reformulation(user_prompt, bool(chat_history)):
+                    retrieved_docs = qa_setup["retriever"].invoke({
+                        "input": user_prompt,
+                        "chat_history": chat_history,
+                    })
+                else:
+                    retrieved_docs = vector_store.similarity_search(user_prompt, k=5)
+                context_str = "\n\n".join(f"[Chunk {i}]\n{doc.page_content}" for i, doc in enumerate(retrieved_docs, 1))
+                formatted_prompt = qa_setup["prompt"].format(context=context_str, input=user_prompt)
+                full_response = stream_with_retry(qa_setup["llm"] | StrOutputParser(), formatted_prompt, message_placeholder)
+                current_sources = extract_citation_metadata(retrieved_docs)
+                if current_sources:
+                    with st.expander("📚 View Source Citations & Passages"):
+                        for idx, src in enumerate(current_sources, 1):
+                            st.markdown(f"**[{idx}] {src['source']}{src['page']}**")
+                            st.caption(f"\"{src['snippet']}\"")
 
             if not full_response:
                 full_response = (
@@ -870,21 +1026,20 @@ if user_prompt := st.chat_input(f"Ask a question about {selected_subject_name}�
             msg = str(exc).lower()
             if any(code in msg for code in ["503", "unavailable", "overloaded"]):
                 full_response = (
-                    "⏳ **Gemini is experiencing high demand right now.** "
-                    "I retried a few times but couldn't get through — please wait a moment and try again."
+                    "⚠️ **System is currently down.** Please try again in a little while. "
+                    "If the issue persists, contact **Mwesigwa Mark** at **+256 701913028** for support."
                 )
             elif any(code in msg for code in ["429", "resource_exhausted", "quota"]):
                 full_response = (
-                    "🚦 **API quota exceeded.** You've hit your Gemini rate limit — "
-                    "wait about a minute before trying again, or check your quota at aistudio.google.com."
+                    "⚠️ **System is currently down.** Please try again in a little while. "
+                    "If the issue persists, contact **Mwesigwa Mark** at **+256 701913028** for support."
                 )
             else:
                 full_response = (
-                    f"❌ An error occurred: `{exc}`\n\nPlease try again later."
+                    "⚠️ **System is currently down.** Please try again in a little while. "
+                    "If the issue persists, contact **Mwesigwa Mark** at **+256 701913028** for support."
                 )
-            st.error(f"Error type: **{type(exc).__name__}**")
-
-        message_placeholder.markdown(full_response)
+            message_placeholder.markdown(full_response)
 
     assistant_msg = {"role": "assistant", "content": full_response}
     if current_sources:

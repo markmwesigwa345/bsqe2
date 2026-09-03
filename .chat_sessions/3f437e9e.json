@@ -1,0 +1,84 @@
+{
+  "Social Sector Statistics": [
+    {
+      "role": "user",
+      "content": "Hello"
+    },
+    {
+      "role": "assistant",
+      "content": "Hello! Great to connect with you. I'm your BSQE2 AI study assistant, ready to help you navigate Social Sector Statistics. \n\nWhether you're working through human development indices, demographic analysis, or poverty and labor metrics, I'm here to help make it clear and manageable. What are we tackling today?"
+    },
+    {
+      "role": "user",
+      "content": "hello"
+    },
+    {
+      "role": "assistant",
+      "content": "Hello! Great to see you. I'm your BSQE2 study assistant, ready to help you master Social Sector Statistics. \n\nWhat are we tackling today—demographic indicators, education and health metrics, poverty measurement, or a specific dataset? Let me know how I can help!"
+    },
+    {
+      "role": "user",
+      "content": "hi"
+    },
+    {
+      "role": "assistant",
+      "content": "Hi there! Great to see you. Ready to tackle some Social Sector Statistics today? \n\nLet me know what topic, dataset, or concept you'd like to dive into!"
+    },
+    {
+      "role": "user",
+      "content": "hello"
+    },
+    {
+      "role": "assistant",
+      "content": "Hello! Ready to dive into Social Sector Statistics today? Whether you need help breaking down demographic trends, poverty and inequality metrics, or labor indicators, I'm here to help you master it. \n\nWhat are we tackling first?"
+    },
+    {
+      "role": "user",
+      "content": "hello"
+    },
+    {
+      "role": "assistant",
+      "content": "Hello! Great to connect with you. I’m your BSQE2 AI study assistant, ready to help you master Social Sector Statistics. \n\nWhat concept, problem set, or topic are we tackling today?"
+    },
+    {
+      "role": "user",
+      "content": "hello"
+    },
+    {
+      "role": "assistant",
+      "content": "Hello! Great to see you. I'm your BSQE2 study assistant, ready to help you master Social Sector Statistics. \n\nWhat topic, concept, or dataset are we diving into today?"
+    },
+    {
+      "role": "user",
+      "content": "hello"
+    },
+    {
+      "role": "assistant",
+      "content": "🚦 **API quota exceeded.** You've hit your Gemini rate limit — wait about a minute before trying again, or check your quota at aistudio.google.com."
+    },
+    {
+      "role": "user",
+      "content": "hello"
+    },
+    {
+      "role": "assistant",
+      "content": "🚦 **API quota exceeded.** You've hit your Gemini rate limit — wait about a minute before trying again, or check your quota at aistudio.google.com."
+    },
+    {
+      "role": "user",
+      "content": "hello"
+    },
+    {
+      "role": "assistant",
+      "content": "⚠️ **System is currently down.** Please try again in a little while. If the issue persists, contact **Mwesigwa Mark** at **+256 701913028** for support."
+    },
+    {
+      "role": "user",
+      "content": "hello"
+    },
+    {
+      "role": "assistant",
+      "content": "⚠️ **System is currently down.** Please try again in a little while. If the issue persists, contact **Mwesigwa Mark** at **+256 701913028** for support."
+    }
+  ]
+}
