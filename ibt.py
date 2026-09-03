@@ -763,7 +763,7 @@ def setup_qa_components(_vector_store, subject_prompt: str) -> dict:
 
     retriever = _vector_store.as_retriever(
         search_type="mmr",
-        search_kwargs={"k": 5, "fetch_k": 20},
+        search_kwargs={"k": 5, "fetch_k": 10},
     )
 
     # Reformulation prompt: condenses chat history + current question into one
