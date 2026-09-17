@@ -1,0 +1,20 @@
+{
+  "Social Sector Statistics": [
+    {
+      "role": "user",
+      "content": "Hello."
+    },
+    {
+      "role": "assistant",
+      "content": "⚠️ **All models are currently busy.** Rate limits reached across all available models. Please wait about 30 seconds before submitting your next question."
+    },
+    {
+      "role": "user",
+      "content": "Hello."
+    },
+    {
+      "role": "assistant",
+      "content": "⚠️ **All models are currently busy.** Rate limits reached across all available models. Please wait about 30 seconds before submitting your next question."
+    }
+  ]
+}

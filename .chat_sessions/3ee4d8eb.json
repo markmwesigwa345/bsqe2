@@ -1,0 +1,12 @@
+{
+  "Social Sector Statistics": [
+    {
+      "role": "user",
+      "content": "hello"
+    },
+    {
+      "role": "assistant",
+      "content": "Hello! Welcome to your Social Sector Statistics study session. I'm your BSQE2 AI assistant, ready to help you master the material. \n\nWhat topic, concept, or dataset are we tackling today?"
+    }
+  ]
+}

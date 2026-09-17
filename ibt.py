@@ -11,8 +11,10 @@ Architecture:
 ─────────────────────────────────────────────────────────────────────────────
 """
 
+import base64
 import json
 import os
+import random
 import re
 import uuid
 import time
@@ -59,6 +61,10 @@ from subjects_config import SUBJECTS
 # ── Paths & Session Persistence Storage ───────────────────────────────────────
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 SESSIONS_DIR = os.path.join(SCRIPT_DIR, ".chat_sessions")
+
+# FAISS L2 distance threshold: scores ABOVE this value are considered low-confidence
+# (lower L2 distance = more similar; higher = less similar)
+FAISS_LOW_CONFIDENCE_THRESHOLD = 0.65
 
 def _ensure_sessions_dir():
     try:
@@ -441,14 +447,6 @@ st.markdown(
     [data-testid="stChatMessageAvatarAssistant"]:has(+ * [data-testid="stSpinner"]) {{
         animation: bsqe2-badge-pulse-active 1s ease-in-out infinite !important;
     }}
-    @keyframes bsqe2-badge-pulse-active {{
-        0%, 100% {{ transform: scale(1);    box-shadow: 0 2px 10px rgba(37,99,235,0.45), 0 0 0 3px rgba(37,99,235,0.12); }}
-        50%      {{ transform: scale(1.12); box-shadow: 0 2px 16px rgba(37,99,235,0.7), 0 0 0 6px rgba(37,99,235,0.18); }}
-    }}
-    .stChatMessage:has([data-testid="stSpinner"]) [data-testid="stChatMessageAvatarAssistant"],
-    [data-testid="stChatMessageAvatarAssistant"]:has(+ * [data-testid="stSpinner"]) {{
-        animation: bsqe2-badge-pulse-active 1s ease-in-out infinite !important;
-    }}
 
     /* Markdown Tables (Fix for dark text/low contrast on tables inside chat) */
     [data-testid="stChatMessage"] table,
@@ -564,6 +562,34 @@ st.markdown(
 
     hr {{
         border-color: {t["border"]} !important;
+    }}
+
+    /* Zero-height helper iframes (voice, copy, TTS components) —
+       MUST use visibility:hidden, NOT display:none.
+       display:none severs the JS bridge these scripts rely on to inject
+       buttons into the parent DOM, making the mic/copy/TTS controls dead.
+       visibility:hidden keeps the element in the layout tree (preserving
+       the event context) while remaining completely invisible. */
+    iframe[title="streamlit.components.v1.html"][height="0"],
+    iframe[height="0"] {{
+        visibility: hidden !important;
+        overflow: hidden !important;
+        height: 0 !important;
+        max-height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: none !important;
+        pointer-events: none !important;
+    }}
+    div[data-testid="stCustomComponentV1"]:has(> iframe[height="0"]) {{
+        visibility: hidden !important;
+        overflow: hidden !important;
+        height: 0 !important;
+        max-height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        /* Allow pointer events to pass through to injected sibling elements */
+        pointer-events: none !important;
     }}
     </style>
     """,
@@ -686,31 +712,31 @@ def load_embeddings() -> HuggingFaceEmbeddings:
 
 @st.cache_resource(show_spinner=False)
 def load_llm() -> ChatGoogleGenerativeAI:
-    """Load and cache the primary Gemini LLM."""
+    """Load and cache the primary Gemini LLM (gemini-3.6-flash)."""
     return ChatGoogleGenerativeAI(
         temperature=0.1,
         model="gemini-3.6-flash",
         google_api_key=os.getenv("GOOGLE_API_KEY"),
         max_retries=1,
-        timeout=20,
+        timeout=30,
     )
 
 
 @st.cache_resource(show_spinner=False)
 def load_llm_gemini_fallback() -> ChatGoogleGenerativeAI:
-    """Gemini 3.5 Flash Lite — lighter Gemini model for MCQ/flashcard generation."""
+    """Gemini 3.6 Flash — reliable model for MCQ/flashcard generation."""
     return ChatGoogleGenerativeAI(
         temperature=0.1,
-        model="gemini-3.5-flash-lite",
+        model="gemini-3.6-flash",
         google_api_key=os.getenv("GOOGLE_API_KEY"),
         max_retries=1,
-        timeout=20,
+        timeout=25,
     )
 
 
 @st.cache_resource(show_spinner=False)
 def load_groq_llm_primary():
-    """Groq compound-mini — primary Groq model for grading (fast, within token limits)."""
+    """Groq groq/compound-mini — primary Groq model for fast grading."""
     if not _GROQ_AVAILABLE:
         return None
     key = os.getenv("GROQ_API_KEY", "").strip()
@@ -724,7 +750,7 @@ def load_groq_llm_primary():
 
 @st.cache_resource(show_spinner=False)
 def load_groq_llm_secondary():
-    """Groq qwen3.8-27b — secondary Groq model for question generation."""
+    """Groq qwen/qwen3.8-27b — secondary Groq model for question generation."""
     if not _GROQ_AVAILABLE:
         return None
     key = os.getenv("GROQ_API_KEY", "").strip()
@@ -871,9 +897,28 @@ def build_chat_history(messages: list) -> list:
 def show_thinking_indicator(placeholder):
     placeholder.markdown(
         """
-        <span style="color:#9CA3AF;font-size:13px;font-style:italic;">
-            thinking…
-        </span>
+        <div class="claude-thinking-container" style="display: flex; align-items: center; gap: 8px; margin: 4px 0; font-family: system-ui, -apple-system, sans-serif;">
+            <span class="claude-thinking-dot" style="display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #2563EB; animation: claude-dot-pulse 1.2s infinite ease-in-out;"></span>
+            <span style="color: var(--text-muted, #9CA3AF); font-size: 13px; font-style: italic;">thinking…</span>
+            <button class="claude-inline-stop-btn" onclick="if(window.parent.__claudeStopExecution) window.parent.__claudeStopExecution();" style="
+                background: transparent;
+                border: 1px solid rgba(156, 163, 175, 0.35);
+                color: var(--text-muted, #9CA3AF);
+                border-radius: 12px;
+                padding: 2px 10px;
+                font-size: 11px;
+                font-weight: 500;
+                cursor: pointer;
+                display: inline-flex;
+                align-items: center;
+                gap: 4px;
+                margin-left: 6px;
+                transition: all 0.2s ease;
+            " onmouseover="this.style.color='#EF4444'; this.style.borderColor='#EF4444'; this.style.background='rgba(239, 68, 68, 0.08)';" onmouseout="this.style.color='var(--text-muted, #9CA3AF)'; this.style.borderColor='rgba(156, 163, 175, 0.35)'; this.style.background='transparent';">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
+                Stop
+            </button>
+        </div>
         """,
         unsafe_allow_html=True,
     )
@@ -926,6 +971,40 @@ def clean_query(text: str) -> str:
     return cleaned or text
 
 
+
+
+def transcribe_audio_file(audio_bytes: bytes, mime_type: str = "audio/wav") -> str:
+    """Transcribe audio bytes using Gemini 2.5 Flash multimodal capability."""
+    if not audio_bytes:
+        return ""
+    try:
+        import google.generativeai as genai
+        gkey = os.getenv("GOOGLE_API_KEY", "").strip()
+        if gkey:
+            genai.configure(api_key=gkey)
+            model = genai.GenerativeModel("gemini-2.5-flash")
+            response = model.generate_content([
+                {"mime_type": mime_type or "audio/wav", "data": audio_bytes},
+                "Transcribe the spoken audio question accurately into plain text. Return ONLY the transcribed text, nothing else."
+            ])
+            return response.text.strip()
+    except Exception as exc:
+        try:
+            b64_data = base64.b64encode(audio_bytes).decode("utf-8")
+            llm = load_llm()
+            msg = HumanMessage(
+                content=[
+                    {"type": "text", "text": "Transcribe the spoken audio question accurately into plain text. Return ONLY the transcribed text, nothing else."},
+                    {"type": "media", "mime_type": mime_type or "audio/wav", "data": b64_data},
+                ]
+            )
+            res = llm.invoke([msg])
+            return res.content.strip()
+        except Exception as e:
+            return f"Audio transcription error: {e}"
+    return "Error: GOOGLE_API_KEY missing."
+
+
 def _parse_score_json(raw: str) -> dict:
     """Robustly extract {score, feedback} JSON from Gemini output.
     Handles prose wrapping, code fences, and single-quoted JSON."""
@@ -954,10 +1033,9 @@ def _parse_score_json(raw: str) -> dict:
     raise ValueError(f"Could not parse score JSON from: {raw[:200]}")
 
 
-def generate_mcq(vector_store, llm) -> dict:
+def generate_mcq(vector_store, llm=None) -> dict:
     """Pull a random chunk from FAISS and ask LLM to produce one MCQ.
-    Returns {question, options:{A,B,C,D}, answer, explanation} or raises on failure."""
-    import random
+    Returns {question, options:{A,B,C,D}, answer, explanation} or empty dict on failure."""
     seed_terms = ["definition", "concept", "theory", "formula", "method", "model", "principle"]
     docs = vector_store.similarity_search(random.choice(seed_terms), k=5)
     if not docs:
@@ -970,12 +1048,27 @@ def generate_mcq(vector_store, llm) -> dict:
         '{"question": "...", "options": {"A": "...", "B": "...", "C": "...", "D": "..."}, '
         '"answer": "<letter>", "explanation": "<one sentence>"}\n\nContent:\n' + chunk
     )
-    raw = (llm | StrOutputParser()).invoke(prompt)
-    raw = re.sub(r"^```[a-z]*\n?", "", raw.strip(), flags=re.IGNORECASE)
-    raw = re.sub(r"```$", "", raw.strip())
-    data = json.loads(raw)
-    if all(k in data for k in ("question", "options", "answer", "explanation")):
-        return data
+    
+    models_to_try = [llm, load_groq_llm_secondary(), load_llm()] if llm else [load_llm(), load_groq_llm_secondary()]
+    for model in models_to_try:
+        if model is None:
+            continue
+        try:
+            raw = (model | StrOutputParser()).invoke(prompt)
+            raw = re.sub(r"^```[a-z]*\n?", "", raw.strip(), flags=re.IGNORECASE)
+            raw = re.sub(r"```$", "", raw.strip())
+            try:
+                data = json.loads(raw)
+            except Exception:
+                m = re.search(r"\{.*\}", raw, re.DOTALL)
+                if m:
+                    data = json.loads(m.group())
+                else:
+                    continue
+            if all(k in data for k in ("question", "options", "answer", "explanation")):
+                return data
+        except Exception:
+            continue
     return {}
 
 
@@ -1010,23 +1103,54 @@ def generate_flashcards(docs: list, llm) -> list:
 
 
 def generate_followups(docs: list) -> list:
-    """Extract up to 3 follow-up question suggestions from retrieved chunk content.
-    Uses capitalized noun phrases (2-4 words) as key terms — no LLM call."""
+    """Generate up to 3 relevant follow-up questions from retrieved chunk content.
+
+    Primary path: uses compound-beta-mini (Groq) for semantically meaningful questions.
+    Fallback: capitalized noun-phrase regex heuristic if Groq is unavailable.
+    Returns a list of question strings (max 3).
+    """
+    if not docs:
+        return []
+
+    context = " ".join(doc.page_content[:300] for doc in docs[:3])
+
+    # ── Primary: LLM-generated follow-ups (fast, semantic) ────────────────────
+    try:
+        llm = load_groq_llm_secondary() or load_groq_llm_primary()
+        if llm:
+            fu_prompt = (
+                "Based on the course content below, write exactly 3 concise follow-up questions "
+                "a student might ask next. Each question should be self-contained and directly "
+                "related to the material. Return ONLY a JSON array of 3 question strings — "
+                "no extra text.\n\nContent:\n" + context
+            )
+            raw = (llm | StrOutputParser()).invoke(fu_prompt)
+            raw = re.sub(r"^```[a-z]*\n?", "", raw.strip(), flags=re.IGNORECASE)
+            raw = re.sub(r"```$", "", raw.strip())
+            questions = json.loads(raw)
+            if isinstance(questions, list):
+                return [str(q).strip() for q in questions if str(q).strip()][:3]
+    except Exception:
+        pass  # Fall through to regex heuristic
+
+    # ── Fallback: capitalized noun-phrase regex (no LLM needed) ───────────────
     text = " ".join(doc.page_content for doc in docs[:3])
-    # Match capitalized multi-word phrases (likely concepts/terms)
     candidates = re.findall(r"\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})\b", text)
-    # Deduplicate while preserving order
     seen, unique = set(), []
     for c in candidates:
         if c.lower() not in seen and len(c) > 6:
             seen.add(c.lower())
             unique.append(c)
-    # Build question strings from top 3 unique terms
-    questions = []
-    templates = ["What is {}?", "How does {} work?", "Explain {} in detail."]
-    for i, term in enumerate(unique[:3]):
-        questions.append(templates[i % len(templates)].format(term))
-    return questions
+    if unique:
+        templates = ["What is {}?", "How does {} work?", "Explain {} in detail."]
+        return [templates[i % len(templates)].format(term) for i, term in enumerate(unique[:3])]
+    return [
+        "Can you provide a practical example?",
+        "What are the key assumptions or formulas?",
+        "How is this concept applied in exam problems?"
+    ]
+
+
 
 
 def needs_reformulation(text: str, has_history: bool) -> bool:
@@ -1037,31 +1161,37 @@ def needs_reformulation(text: str, has_history: bool) -> bool:
     return bool(_CONTEXT_REF_RE.search(text))
 
 
-def stream_with_retry(chain, prompt_input, placeholder, max_retries: int = 2, base_delay: int = 1):
+def stream_with_retry(chain, prompt_input, placeholder, max_retries: int = 2, base_delay: int = 1, swappable: bool = True):
     """Stream into a Streamlit placeholder with throttled DOM updates (every 20 tokens).
     On 429/quota errors, swaps to the next model in the pool instead of retrying the same one.
     On transient 503/overload errors, retries with exponential backoff.
-    Returns the full response string."""
-    # Extract the parser from the chain if it's a pipeline (llm | parser)
-    # so we can swap just the LLM part when falling back
-    last_exc = None
 
-    # Determine if this chain is a simple llm|parser pipeline we can swap
-    # For non-swappable chains (e.g. history-aware retriever), just retry normally
+    Args:
+        swappable: If True (default), the chain is treated as a simple llm|parser pipeline
+                   and the LLM can be swapped to another pool model on quota errors.
+                   Pass False for pre-built non-swappable chains (e.g. history-aware retriever).
+    Returns the full response string.
+    """
+    # Build the LLM pool ONCE per call (not inside the retry loop) to avoid
+    # repeated construction overhead and redundant error propagation.
+    last_exc = None
     llm_pool = get_available_llm()
     parser = StrOutputParser()
 
+    if not llm_pool:
+        placeholder.markdown("⚠️ No AI models are available. Check your API key and try again.")
+        return "⚠️ No AI models available."
+
     # Try each model in the pool for quota errors
     for model_idx, llm in enumerate(llm_pool):
-        current_chain = llm | parser if not hasattr(chain, 'steps') else chain
-        # If caller passed a pre-built non-swappable chain, only use it on first model
-        if model_idx > 0 and hasattr(chain, 'steps'):
+        current_chain = (llm | parser) if swappable else chain
+        # Non-swappable chains (e.g. history-aware retriever) are only tried once
+        if model_idx > 0 and not swappable:
             break
 
-
         for attempt in range(max_retries):
+            full = ""
             try:
-                full = ""
                 buf = 0
                 for chunk in current_chain.stream(prompt_input):
                     full += chunk
@@ -1070,7 +1200,16 @@ def stream_with_retry(chain, prompt_input, placeholder, max_retries: int = 2, ba
                         placeholder.markdown(full + "▌")
                 placeholder.markdown(full)
                 return full
+            except (KeyboardInterrupt, GeneratorExit):
+                stopped_text = (full + " *(stopped)*").strip() if full else "*Response stopped.*"
+                placeholder.markdown(stopped_text)
+                return stopped_text
             except Exception as e:
+                err_type = type(e).__name__.lower()
+                if "stop" in err_type or "cancel" in err_type:
+                    stopped_text = (full + " *(stopped)*").strip() if full else "*Response stopped.*"
+                    placeholder.markdown(stopped_text)
+                    return stopped_text
                 msg = str(e).lower()
                 last_exc = e
                 if any(code in msg for code in ["429", "resource_exhausted", "quota", "rate_limit", "rate limit"]):
@@ -1086,6 +1225,7 @@ def stream_with_retry(chain, prompt_input, placeholder, max_retries: int = 2, ba
                     raise
     raise last_exc
 
+
 # ── Main App ──────────────────────────────────────────────────────────────────
 
 st.title("BSQE2 AI")
@@ -1094,32 +1234,47 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# Load resources for the currently selected subject
-with st.spinner(f"Loading resources for **{selected_subject_name}**…"):
-    try:
-        vector_store, load_error = load_vector_store(
-            selected_cfg["faiss_dir"], selected_subject_name
-        )
-    except Exception as exc:
-        load_error = f"❌ Unexpected error: {exc}"
-        vector_store = None
+# ── Resource Loading (session-state guarded — runs once per session/subject) ──
+# Key: combine session_id + subject name so switching subjects forces a reload.
+_resource_key = f"resources_loaded_{session_id}_{selected_subject_name}"
 
-if load_error:
-    st.error(load_error)
-    st.warning(
-        f"Please ensure the folder **`{selected_cfg['faiss_dir']}`** "
-        "is present in the project directory."
-    )
-    st.stop()
+if not st.session_state.get(_resource_key):
+    with st.spinner(f"Preparing {selected_subject_name} study assistant…"):
+        try:
+            vector_store, load_error = load_vector_store(
+                selected_cfg["faiss_dir"], selected_subject_name
+            )
+        except Exception as exc:
+            load_error = f"❌ Unexpected error: {exc}"
+            vector_store = None
 
-try:
-    qa_setup = setup_qa_components(vector_store, selected_cfg["prompt"])
-    if not isinstance(qa_setup, dict):
-        st.cache_resource.clear()
-        st.rerun()
-except Exception as exc:
-    st.error(f"❌ Failed to set up the AI chain: {exc}")
-    st.stop()
+        if load_error:
+            st.error(load_error)
+            st.warning(
+                f"Please ensure the folder **`{selected_cfg['faiss_dir']}`** "
+                "is present in the project directory."
+            )
+            st.stop()
+
+        try:
+            qa_setup = setup_qa_components(vector_store, selected_cfg["prompt"])
+            if not isinstance(qa_setup, dict):
+                st.cache_resource.clear()
+                st.rerun()
+        except Exception as exc:
+            st.error(f"❌ Failed to set up the AI chain: {exc}")
+            st.stop()
+
+    # Persist loaded objects in session state so reruns skip this block entirely
+    st.session_state[_resource_key] = True
+    st.session_state[f"vector_store_{selected_subject_name}"] = vector_store
+    st.session_state[f"qa_setup_{selected_subject_name}"] = qa_setup
+    st.rerun()             # clean rerun — page now renders instantly
+else:
+    # Fast path: retrieve already-loaded objects from session state
+    vector_store = st.session_state[f"vector_store_{selected_subject_name}"]
+    qa_setup = st.session_state[f"qa_setup_{selected_subject_name}"]
+
 
 # Welcome message (shown only when the chat is empty)
 if not current_messages:
@@ -1140,6 +1295,407 @@ for message in current_messages:
 
 # ── Chat Input & Response ─────────────────────────────────────────────────────
 MAX_INPUT_CHARS = 1500
+
+# ── Claude AI-Style Voice & Audio Dictation ────────────────────────────────────
+# Injects a sleek, minimalist microphone button directly to the left of the
+# chat input submit button, replicating Claude AI's prompt-box voice behavior.
+components.html(
+    """
+    <script>
+    (function() {
+        const pDoc = window.parent.document;
+        if (!pDoc) return;
+
+        // 1. Inject Claude AI Mic Styles into parent document
+        if (!pDoc.getElementById('claude-voice-style')) {
+            const style = pDoc.createElement('style');
+            style.id = 'claude-voice-style';
+            style.textContent = `
+                #claude-voice-btn {
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    width: 32px;
+                    height: 32px;
+                    min-width: 32px;
+                    min-height: 32px;
+                    border-radius: 50%;
+                    border: none;
+                    background: transparent;
+                    cursor: pointer;
+                    margin-right: 6px;
+                    padding: 0;
+                    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+                    color: inherit;
+                    opacity: 0.65;
+                    outline: none;
+                    position: relative;
+                    flex-shrink: 0;
+                    user-select: none;
+                    z-index: 2;
+                }
+                #claude-voice-btn:hover {
+                    opacity: 1;
+                    background: rgba(150, 150, 150, 0.16);
+                    transform: scale(1.05);
+                }
+                #claude-voice-btn:active {
+                    transform: scale(0.95);
+                }
+                #claude-voice-btn.recording {
+                    opacity: 1 !important;
+                    background: rgba(239, 68, 68, 0.18) !important;
+                    color: #EF4444 !important;
+                    animation: claude-mic-pulse 1.4s infinite ease-in-out;
+                }
+                @keyframes claude-mic-pulse {
+                    0% {
+                        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5);
+                        transform: scale(1);
+                    }
+                    50% {
+                        box-shadow: 0 0 0 6px rgba(239, 68, 68, 0);
+                        transform: scale(1.08);
+                    }
+                    100% {
+                        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+                        transform: scale(1);
+                    }
+                }
+                #claude-voice-pill {
+                    position: absolute;
+                    bottom: calc(100% + 10px);
+                    right: 12px;
+                    display: none;
+                    align-items: center;
+                    gap: 6px;
+                    padding: 5px 12px;
+                    border-radius: 16px;
+                    background: #1F2937;
+                    color: #F3F4F6;
+                    font-size: 11.5px;
+                    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                    font-weight: 500;
+                    box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+                    border: 1px solid rgba(255,255,255,0.12);
+                    pointer-events: none;
+                    z-index: 99999;
+                    opacity: 0;
+                    transform: translateY(4px);
+                    transition: opacity 0.2s ease, transform 0.2s ease;
+                }
+                #claude-voice-pill.visible {
+                    display: flex;
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+                .claude-pill-dot {
+                    width: 7px;
+                    height: 7px;
+                    border-radius: 50%;
+                    background: #EF4444;
+                    animation: claude-dot-pulse 1.2s infinite;
+                }
+                @keyframes claude-dot-pulse {
+                    0%, 100% { opacity: 1; transform: scale(1); }
+                    50% { opacity: 0.3; transform: scale(0.7); }
+                }
+                /* Claude Stop Button styling on chat submit button */
+                [data-testid="stChatInputSubmitButton"].claude-stop-active {
+                    background-color: #EF4444 !important;
+                    color: #FFFFFF !important;
+                    opacity: 1 !important;
+                    cursor: pointer !important;
+                    pointer-events: auto !important;
+                    transform: scale(1);
+                    transition: all 0.2s ease !important;
+                    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+                    animation: claude-stop-pulse 1.6s infinite ease-in-out;
+                }
+                [data-testid="stChatInputSubmitButton"].claude-stop-active:hover {
+                    background-color: #DC2626 !important;
+                    transform: scale(1.08) !important;
+                }
+                @keyframes claude-stop-pulse {
+                    0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+                    50% { box-shadow: 0 0 0 5px rgba(239, 68, 68, 0); }
+                    100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+                }
+            `;
+            pDoc.head.appendChild(style);
+        }
+
+        // 2. Global voice state on parent window
+        if (!window.parent.__claudeVoiceState) {
+            window.parent.__claudeVoiceState = {
+                recognition: null,
+                isRecording: false,
+                baseText: '',
+                finalTranscript: '',
+            };
+        }
+        const state = window.parent.__claudeVoiceState;
+
+        function setChatInputValue(text) {
+            const textarea = pDoc.querySelector('[data-testid="stChatInput"] textarea');
+            if (!textarea) return;
+            const nativeSetter = Object.getOwnPropertyDescriptor(window.parent.HTMLTextAreaElement.prototype, 'value').set;
+            nativeSetter.call(textarea, text);
+            textarea.dispatchEvent(new Event('input', { bubbles: true }));
+            textarea.dispatchEvent(new Event('change', { bubbles: true }));
+            textarea.style.height = 'auto';
+            textarea.style.height = textarea.scrollHeight + 'px';
+            textarea.focus();
+        }
+
+        function showPill(msg, isError) {
+            let pill = pDoc.getElementById('claude-voice-pill');
+            const chatInput = pDoc.querySelector('[data-testid="stChatInput"]');
+            if (!pill && chatInput) {
+                pill = pDoc.createElement('div');
+                pill.id = 'claude-voice-pill';
+                pill.innerHTML = '<span class="claude-pill-dot"></span><span id="claude-pill-text"></span>';
+                chatInput.style.position = 'relative';
+                chatInput.appendChild(pill);
+            }
+            if (pill) {
+                const textSpan = pill.querySelector('#claude-pill-text');
+                if (textSpan) textSpan.textContent = msg;
+                const dot = pill.querySelector('.claude-pill-dot');
+                if (dot) dot.style.display = isError ? 'none' : 'inline-block';
+                pill.classList.add('visible');
+            }
+        }
+
+        function hidePill() {
+            const pill = pDoc.getElementById('claude-voice-pill');
+            if (pill) pill.classList.remove('visible');
+        }
+
+        function stopRecordingUI() {
+            state.isRecording = false;
+            const micBtn = pDoc.getElementById('claude-voice-btn');
+            if (micBtn) {
+                micBtn.classList.remove('recording');
+                micBtn.setAttribute('title', 'Dictate message (Microphone)');
+            }
+            hidePill();
+        }
+
+        function toggleRecording() {
+            const SpeechRecognition = window.parent.SpeechRecognition || window.parent.webkitSpeechRecognition || window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) {
+                showPill('Speech recognition unsupported in this browser (try Chrome, Edge, or Safari)', true);
+                setTimeout(hidePill, 4000);
+                return;
+            }
+
+            const micBtn = pDoc.getElementById('claude-voice-btn');
+
+            if (state.isRecording) {
+                if (state.recognition) {
+                    try { state.recognition.stop(); } catch(e) {}
+                }
+                stopRecordingUI();
+                return;
+            }
+
+            // Start listening
+            const textarea = pDoc.querySelector('[data-testid="stChatInput"] textarea');
+            state.baseText = (textarea && textarea.value) ? textarea.value.trim() + ' ' : '';
+            state.finalTranscript = '';
+
+            try {
+                state.recognition = new SpeechRecognition();
+                state.recognition.continuous = true;
+                state.recognition.interimResults = true;
+                state.recognition.lang = 'en-US';
+
+                state.recognition.onstart = function() {
+                    state.isRecording = true;
+                    if (micBtn) {
+                        micBtn.classList.add('recording');
+                        micBtn.setAttribute('title', 'Listening... click to stop');
+                    }
+                    showPill('Listening... speak clearly', false);
+                };
+
+                state.recognition.onresult = function(event) {
+                    let interim = '';
+                    for (let i = event.resultIndex; i < event.results.length; ++i) {
+                        if (event.results[i].isFinal) {
+                            state.finalTranscript += event.results[i][0].transcript + ' ';
+                        } else {
+                            interim += event.results[i][0].transcript;
+                        }
+                    }
+                    const combined = (state.baseText + state.finalTranscript + interim).trim();
+                    setChatInputValue(combined);
+                };
+
+                state.recognition.onerror = function(event) {
+                    console.warn('SpeechRecognition error:', event.error);
+                    if (event.error === 'not-allowed') {
+                        showPill('Microphone access denied. Please allow microphone in browser.', true);
+                        setTimeout(hidePill, 4000);
+                    } else if (event.error !== 'no-speech') {
+                        showPill('Voice error: ' + event.error, true);
+                        setTimeout(hidePill, 3000);
+                    }
+                    stopRecordingUI();
+                };
+
+                state.recognition.onend = function() {
+                    if (state.isRecording) {
+                        stopRecordingUI();
+                        const combined = (state.baseText + state.finalTranscript).trim();
+                        if (combined) setChatInputValue(combined);
+                    }
+                };
+
+                state.recognition.start();
+            } catch(err) {
+                console.error('Failed to start SpeechRecognition:', err);
+                stopRecordingUI();
+            }
+        }
+
+        function ensureMicButton() {
+            const submitBtn = pDoc.querySelector('[data-testid="stChatInputSubmitButton"]');
+            if (!submitBtn || !submitBtn.parentNode) return;
+
+            const parent = submitBtn.parentNode;
+            parent.style.display = 'flex';
+            parent.style.alignItems = 'center';
+
+            let micBtn = pDoc.getElementById('claude-voice-btn');
+            if (!micBtn) {
+                micBtn = pDoc.createElement('button');
+                micBtn.id = 'claude-voice-btn';
+                micBtn.type = 'button';
+                micBtn.setAttribute('title', 'Dictate message (Microphone)');
+                micBtn.setAttribute('aria-label', 'Dictate message');
+                micBtn.innerHTML = `
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
+                        <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                        <line x1="12" y1="19" x2="12" y2="22"></line>
+                    </svg>
+                `;
+                micBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    toggleRecording();
+                });
+            }
+
+            if (state.isRecording) {
+                micBtn.classList.add('recording');
+                micBtn.setAttribute('title', 'Listening... click to stop');
+            } else {
+                micBtn.classList.remove('recording');
+                micBtn.setAttribute('title', 'Dictate message (Microphone)');
+            }
+
+            if (submitBtn.previousElementSibling !== micBtn) {
+                parent.insertBefore(micBtn, submitBtn);
+            }
+        }
+
+        // Global stop handler accessible by inline buttons and prompt box
+        window.parent.__claudeStopExecution = function() {
+            const stopBtn = pDoc.querySelector('[data-testid="stStatusWidget"] button') ||
+                            pDoc.querySelector('[data-testid="stStatusWidget"] [role="button"]') ||
+                            pDoc.querySelector('header button[aria-label="Stop"]') ||
+                            pDoc.querySelector('button[kind="header"]');
+            if (stopBtn) {
+                stopBtn.click();
+                return true;
+            }
+            return false;
+        };
+
+        function updateStopButtonState() {
+            const submitBtn = pDoc.querySelector('[data-testid="stChatInputSubmitButton"]');
+            if (!submitBtn) return;
+
+            const isRunning = !!(
+                pDoc.querySelector('[data-testid="stStatusWidget"]') ||
+                pDoc.querySelector('.claude-thinking-container') ||
+                pDoc.querySelector('[data-testid="stSpinner"]')
+            );
+
+            if (isRunning) {
+                if (!submitBtn.__originalHtml) {
+                    submitBtn.__originalHtml = submitBtn.innerHTML;
+                }
+                submitBtn.disabled = false;
+                submitBtn.classList.add('claude-stop-active');
+                submitBtn.setAttribute('title', 'Stop generating');
+                submitBtn.setAttribute('aria-label', 'Stop generating');
+                submitBtn.innerHTML = `
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+                        <rect x="4" y="4" width="16" height="16" rx="2"></rect>
+                    </svg>
+                `;
+                if (!submitBtn.__claudeStopBound) {
+                    submitBtn.__claudeStopBound = true;
+                    submitBtn.addEventListener('click', function(e) {
+                        if (submitBtn.classList.contains('claude-stop-active')) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            window.parent.__claudeStopExecution && window.parent.__claudeStopExecution();
+                        }
+                    }, true);
+                }
+            } else {
+                if (submitBtn.classList.contains('claude-stop-active')) {
+                    submitBtn.classList.remove('claude-stop-active');
+                    if (submitBtn.__originalHtml) {
+                        submitBtn.innerHTML = submitBtn.__originalHtml;
+                    }
+                    submitBtn.setAttribute('title', 'Send message');
+                    submitBtn.setAttribute('aria-label', 'Send message');
+                }
+            }
+        }
+
+        function ensureAllControls() {
+            ensureMicButton();
+            updateStopButtonState();
+        }
+
+        // Keep controls injected and synchronized across Streamlit dynamic reruns
+        if (window.parent.__claudeVoiceObserver) {
+            window.parent.__claudeVoiceObserver.disconnect();
+        }
+        if (window.parent.__claudeStopInterval) {
+            clearInterval(window.parent.__claudeStopInterval);
+        }
+
+        let debounceTimer = null;
+        function throttledEnsureControls() {
+            if (debounceTimer) return;
+            debounceTimer = setTimeout(() => {
+                debounceTimer = null;
+                ensureAllControls();
+            }, 100);
+        }
+
+        const observer = new MutationObserver(() => {
+            throttledEnsureControls();
+        });
+        const targetArea = pDoc.querySelector('[data-testid="stBottom"]') || pDoc.body;
+        observer.observe(targetArea, { childList: true, subtree: true });
+        window.parent.__claudeVoiceObserver = observer;
+
+        ensureAllControls();
+    })();
+    </script>
+    """,
+    height=0,
+    width=0,
+)
 
 if user_prompt := st.chat_input(f"Ask a question about {selected_subject_name}…"):
     if len(user_prompt) > MAX_INPUT_CHARS:
@@ -1219,7 +1775,7 @@ if user_prompt := st.chat_input(f"Ask a question about {selected_subject_name}�
                     scored_docs = vector_store.similarity_search_with_score(query_for_retrieval, k=5)
                     retrieved_docs = [doc for doc, _ in scored_docs]
                     top_score = scored_docs[0][1] if scored_docs else 0
-                    low_confidence = top_score > 0.65
+                    low_confidence = top_score > FAISS_LOW_CONFIDENCE_THRESHOLD
                 context_str = "\n\n".join(f"[Chunk {i}]\n{doc.page_content}" for i, doc in enumerate(retrieved_docs, 1))
                 formatted_prompt = qa_setup["prompt"].format(context=context_str, input=user_prompt)
                 full_response = stream_with_retry(qa_setup["llm"] | StrOutputParser(), formatted_prompt, message_placeholder)
@@ -1252,23 +1808,28 @@ if user_prompt := st.chat_input(f"Ask a question about {selected_subject_name}�
                     "Please try rephrasing your question."
                 )
 
+        except (KeyboardInterrupt, GeneratorExit):
+            full_response = (full_response + " *(stopped)*").strip() if full_response else "*Response stopped.*"
+            message_placeholder.markdown(full_response)
         except Exception as exc:
-            msg = str(exc).lower()
-            if any(code in msg for code in ["429", "resource_exhausted", "quota", "rate_limit"]):
-                full_response = (
-                    "⚠️ **All models are currently busy.** Rate limits reached across all available models. "
-                    "Please wait about 30 seconds before submitting your next question."
-                )
-            elif any(code in msg for code in ["503", "unavailable", "overloaded"]):
-                full_response = (
-                    "⚠️ **Server Busy.** Google Gemini is temporarily overloaded. "
-                    "Please wait a moment and try asking your question again."
-                )
+            err_type = type(exc).__name__.lower()
+            if "stop" in err_type or "cancel" in err_type:
+                full_response = (full_response + " *(stopped)*").strip() if full_response else "*Response stopped.*"
+                message_placeholder.markdown(full_response)
             else:
-                full_response = (
-                    "⚠️ **System Interruption.** Unable to process your request at the moment. "
-                    "If this issue persists, contact **Mwesigwa Mark** at **+256 701913028** for support."
-                )
+                msg = str(exc).lower()
+                if any(code in msg for code in ["429", "resource_exhausted", "quota", "rate_limit"]):
+                    full_response = (
+                        "⏳ **The study assistant is currently busy with high request volume.** "
+                        "Please wait about 20–30 seconds before asking your next question.\n\n"
+                        "*If this continues, you may contact **Mwesigwa Mark** at **+256 701913028** for assistance.*"
+                    )
+                else:
+                    full_response = (
+                        "⚠️ **Temporary Service Pause.** Unable to process your question at this moment. "
+                        "Please try asking again in a moment.\n\n"
+                        "*If this issue persists, please reach out to **Mwesigwa Mark** at **+256 701913028** for support.*"
+                    )
 
     assistant_msg = {"role": "assistant", "content": full_response}
     if current_sources:
@@ -1313,14 +1874,14 @@ if st.session_state.get("generate_flashcards") and st.session_state.get("flashca
                         st.session_state.fc_scores[i] = sc
                         st.markdown(f"{score_badge(sc)}  {fb}")
                     except Exception as e:
-                        st.warning("⚠️ Could not grade your answer. Please contact **Mwesigwa Mark** at **+256 701913028** for support.")
+                        st.warning("⚠️ Unable to grade your answer right now. Please try submitting again. If this persists, contact **Mwesigwa Mark** at **+256 701913028**.")
                     total_answered += 1
                     score_sum += st.session_state.fc_scores[i]
         if total_answered > 0:
             avg = score_sum // total_answered
             st.markdown(f"---\n**{total_answered}/{len(cards)} answered — Average: {avg}/100**")
     else:
-        st.warning("Could not generate flashcards for this answer.")
+        st.info("💡 Unable to generate flashcards for this answer right now. Please try asking another question.")
 
 # ── Quiz Mode (MCQ) ──────────────────────────────────────────────────────────
 if st.session_state.get("quiz_mode"):
@@ -1330,19 +1891,18 @@ if st.session_state.get("quiz_mode"):
     st.markdown("---")
     st.markdown("#### 📝 Quiz Mode — Multiple Choice")
 
-    # Generate a new MCQ if none active — gemini-1.5-flash (reliable JSON structure)
+    # Generate a new MCQ if none active
     if not st.session_state.get("mcq_question"):
         with st.spinner("Generating question…"):
             try:
                 mcq = generate_mcq(vector_store, load_llm_gemini_fallback())
-            except Exception as e:
-                st.warning("⚠️ Could not generate a question. Please contact **Mwesigwa Mark** at **+256 701913028** for support.")
+            except Exception:
                 mcq = {}
         if mcq:
             st.session_state.mcq_question = mcq
             st.session_state.mcq_answered = False
         else:
-            st.warning("⚠️ Could not generate a question. Please contact **Mwesigwa Mark** at **+256 701913028** for support.")
+            st.warning("⚠️ Unable to prepare a question right now. Please try again. If this persists, contact **Mwesigwa Mark** at **+256 701913028**.")
 
     mcq = st.session_state.get("mcq_question")
     if mcq:
@@ -1350,6 +1910,7 @@ if st.session_state.get("quiz_mode"):
         option_labels = [f"{k}: {v}" for k, v in mcq["options"].items()]
 
         if not st.session_state.get("mcq_answered"):
+            # ── Pre-answer: show radio selector and submit button ──────────────
             selected = st.radio("Choose your answer:", option_labels, key="mcq_radio", index=None)
             if st.button("✅ Submit", key="mcq_submit"):
                 if not selected:
@@ -1359,7 +1920,7 @@ if st.session_state.get("quiz_mode"):
                     correct_letter = mcq["answer"].strip().upper()
                     correct_text = mcq["options"].get(correct_letter, "")
 
-                    # Ask Gemini to score with partial credit reasoning
+                    # Ask grader LLM to score with partial credit reasoning
                     grade_prompt = (
                         f"Question: {mcq['question']}\n"
                         f"Options: {json.dumps(mcq['options'])}\n"
@@ -1372,7 +1933,6 @@ if st.session_state.get("quiz_mode"):
                         'Reply ONLY with valid JSON: {"score": <number>, "feedback": "<one sentence>"}'
                     )
                     try:
-                        # qwen3.8-27b — fast grading on Groq inference chips
                         grader = load_groq_llm_primary() or load_llm()
                         raw = (grader | StrOutputParser()).invoke(grade_prompt)
                         result = _parse_score_json(raw)
@@ -1388,8 +1948,10 @@ if st.session_state.get("quiz_mode"):
                         st.session_state.mcq_score = qs
                         st.rerun()
                     except Exception as e:
-                        st.warning("⚠️ Could not grade your answer. Please contact **Mwesigwa Mark** at **+256 701913028** for support.")
-            # Show result after answering
+                        st.warning("⚠️ Unable to evaluate your answer right now. Please try submitting again. If this persists, contact **Mwesigwa Mark** at **+256 701913028**.")
+
+        else:
+            # ── Post-answer: show coloured options, score, feedback, next button ─
             correct_letter = mcq["answer"].strip().upper()
             chosen_letter = st.session_state.get("mcq_last_chosen", "")
             sc = st.session_state.get("mcq_last_score", 0)
@@ -1425,10 +1987,9 @@ if st.session_state.get("test_me_mode"):
     st.markdown("---")
     st.markdown("#### 🧠 Test Me Mode")
 
-    # Generate a new question if none is active — compound-mini (fast, short output)
+    # Generate a new question if none is active
     if not st.session_state.get("test_me_question"):
         seed_terms = ["definition", "concept", "theory", "formula", "method", "model", "analysis"]
-        import random
         seed = random.choice(seed_terms)
         test_docs = vector_store.similarity_search(seed, k=3)
         if test_docs:
@@ -1443,7 +2004,7 @@ if st.session_state.get("test_me_mode"):
                 st.session_state.test_me_question = question
                 st.session_state.test_me_context = chunk
             except Exception as e:
-                st.warning("⚠️ Could not generate a question. Please contact **Mwesigwa Mark** at **+256 701913028** for support.")
+                st.warning("⚠️ Unable to prepare a test question right now. Please try again. If this persists, contact **Mwesigwa Mark** at **+256 701913028**.")
 
     if st.session_state.get("test_me_question"):
         st.markdown(f"**Question:** {st.session_state.test_me_question}")
@@ -1459,7 +2020,6 @@ if st.session_state.get("test_me_mode"):
                     'and use of key terms. Reply ONLY with valid JSON: {"score": <number>, "feedback": "<two sentences max>"}'
                 )
                 try:
-                    # qwen3.8-27b — fast grading on Groq inference chips
                     grader = load_groq_llm_primary() or load_llm()
                     raw = (grader | StrOutputParser()).invoke(eval_prompt)
                     result = _parse_score_json(raw)
@@ -1476,7 +2036,7 @@ if st.session_state.get("test_me_mode"):
                     st.session_state.pop("test_me_question", None)
                     st.session_state.pop("test_me_context", None)
                 except Exception as e:
-                        st.warning("⚠️ Could not evaluate your answer. Please contact **Mwesigwa Mark** at **+256 701913028** for support.")
+                    st.warning("⚠️ Unable to evaluate your answer right now. Please try submitting again. If this persists, contact **Mwesigwa Mark** at **+256 701913028**.")
         with col2:
             if st.button("⏭️ Skip Question", key="test_me_skip"):
                 st.session_state.pop("test_me_question", None)
@@ -1504,91 +2064,189 @@ if st.session_state.get("followup_clicked"):
         width=0,
     )
 
-# ── Dynamic Copy Button Injector (DOM Component) ──────────────────────────────
+# ── Dynamic Action Buttons Injector (Copy & TTS Read Aloud) ───────────────────
 components.html(
-    """
+    r"""
     <script>
-    function injectCopyButtons() {
+    function injectActionButtons() {
         const doc = window.parent.document;
         const messages = doc.querySelectorAll('[data-testid="stChatMessage"]');
         
         messages.forEach((msg) => {
             const isAssistant = msg.querySelector('[data-testid="stChatMessageAvatarAssistant"]');
-            const alreadyHasBtn = msg.querySelector('.bsqe2-copy-btn');
+            const alreadyHasCopy = msg.querySelector('.bsqe2-copy-btn');
+            const alreadyHasTTS = msg.querySelector('.bsqe2-tts-btn');
             
-            if (isAssistant && !alreadyHasBtn) {
-                const btn = doc.createElement('button');
-                btn.className = 'bsqe2-copy-btn';
-                btn.innerHTML = '📋 Copy Answer';
-                btn.style.cssText = `
-                    background: transparent;
-                    border: 1px solid rgba(156, 163, 175, 0.35);
-                    color: inherit;
-                    opacity: 0.85;
-                    border-radius: 6px;
-                    padding: 4px 12px;
-                    font-size: 11px;
-                    font-weight: 500;
-                    cursor: pointer;
-                    margin-top: 8px;
-                    margin-bottom: 4px;
-                    transition: all 0.2s ease;
-                `;
-                
-                btn.onmouseover = () => { btn.style.opacity = '1'; btn.style.borderColor = '#2563EB'; };
-                btn.onmouseout = () => { btn.style.opacity = '0.85'; btn.style.borderColor = 'rgba(156, 163, 175, 0.35)'; };
-                
-                btn.onclick = () => {
-                    const markdownEl = msg.querySelector('[data-testid="stMarkdownContainer"]');
-                    if (!markdownEl) return;
-                    const textToCopy = markdownEl.innerText;
+            if (isAssistant && (!alreadyHasCopy || !alreadyHasTTS)) {
+                let actionBar = msg.querySelector('.bsqe2-action-bar');
+                if (!actionBar) {
+                    actionBar = doc.createElement('div');
+                    actionBar.className = 'bsqe2-action-bar';
+                    actionBar.style.cssText = 'display: flex; gap: 8px; align-items: center; margin-top: 8px; margin-bottom: 4px; flex-wrap: wrap;';
+                    msg.appendChild(actionBar);
+                }
 
-                    function doFallback(text) {
-                        try {
-                            const pDoc = window.parent.document;
-                            const textarea = pDoc.createElement('textarea');
-                            textarea.value = text;
-                            textarea.style.position = 'fixed';
-                            textarea.style.left = '-9999px';
-                            textarea.style.top = '-9999px';
-                            pDoc.body.appendChild(textarea);
-                            textarea.focus();
-                            textarea.select();
-                            const success = pDoc.execCommand('copy');
-                            pDoc.body.removeChild(textarea);
-                            if (success) {
-                                btn.innerHTML = '✅ Copied!';
-                                setTimeout(() => { btn.innerHTML = '📋 Copy Answer'; }, 1800);
-                            } else {
-                                btn.innerHTML = '❌ Failed';
+                if (!alreadyHasCopy) {
+                    const btn = doc.createElement('button');
+                    btn.className = 'bsqe2-copy-btn';
+                    btn.innerHTML = '📋 Copy Answer';
+                    btn.style.cssText = `
+                        background: transparent;
+                        border: 1px solid rgba(156, 163, 175, 0.35);
+                        color: inherit;
+                        opacity: 0.85;
+                        border-radius: 6px;
+                        padding: 4px 12px;
+                        font-size: 11px;
+                        font-weight: 500;
+                        cursor: pointer;
+                        transition: all 0.2s ease;
+                    `;
+                    
+                    btn.onmouseover = () => { btn.style.opacity = '1'; btn.style.borderColor = '#2563EB'; };
+                    btn.onmouseout = () => { btn.style.opacity = '0.85'; btn.style.borderColor = 'rgba(156, 163, 175, 0.35)'; };
+                    
+                    btn.onclick = () => {
+                        const markdownEl = msg.querySelector('[data-testid="stMarkdownContainer"]');
+                        if (!markdownEl) return;
+                        const textToCopy = markdownEl.innerText;
+
+                        function doFallback(text) {
+                            try {
+                                const pDoc = window.parent.document;
+                                const textarea = pDoc.createElement('textarea');
+                                textarea.value = text;
+                                textarea.style.position = 'fixed';
+                                textarea.style.left = '-9999px';
+                                textarea.style.top = '-9999px';
+                                pDoc.body.appendChild(textarea);
+                                textarea.focus();
+                                textarea.select();
+                                const success = pDoc.execCommand('copy');
+                                pDoc.body.removeChild(textarea);
+                                if (success) {
+                                    btn.innerHTML = '✅ Copied!';
+                                    setTimeout(() => { btn.innerHTML = '📋 Copy Answer'; }, 1800);
+                                } else {
+                                    btn.innerHTML = '❌ Failed';
+                                    setTimeout(() => { btn.innerHTML = '📋 Copy Answer'; }, 1800);
+                                }
+                            } catch (err) {
+                                console.error('Copy fallback failed:', err);
+                                btn.innerHTML = '❌ Error';
                                 setTimeout(() => { btn.innerHTML = '📋 Copy Answer'; }, 1800);
                             }
-                        } catch (err) {
-                            console.error('Copy fallback failed:', err);
-                            btn.innerHTML = '❌ Error';
-                            setTimeout(() => { btn.innerHTML = '📋 Copy Answer'; }, 1800);
                         }
-                    }
 
-                    if (window.parent && window.parent.navigator && window.parent.navigator.clipboard && window.parent.navigator.clipboard.writeText) {
-                        window.parent.navigator.clipboard.writeText(textToCopy)
-                            .then(() => {
-                                btn.innerHTML = '✅ Copied!';
-                                setTimeout(() => { btn.innerHTML = '📋 Copy Answer'; }, 1800);
-                            })
-                            .catch(() => {
-                                doFallback(textToCopy);
-                            });
-                    } else {
-                        doFallback(textToCopy);
-                    }
-                };
-                
-                msg.appendChild(btn);
+                        if (window.parent && window.parent.navigator && window.parent.navigator.clipboard && window.parent.navigator.clipboard.writeText) {
+                            window.parent.navigator.clipboard.writeText(textToCopy)
+                                .then(() => {
+                                    btn.innerHTML = '✅ Copied!';
+                                    setTimeout(() => { btn.innerHTML = '📋 Copy Answer'; }, 1800);
+                                })
+                                .catch(() => {
+                                    doFallback(textToCopy);
+                                });
+                        } else {
+                            doFallback(textToCopy);
+                        }
+                    };
+                    actionBar.appendChild(btn);
+                }
+
+                if (!alreadyHasTTS) {
+                    const ttsBtn = doc.createElement('button');
+                    ttsBtn.className = 'bsqe2-tts-btn';
+                    ttsBtn.innerHTML = '🔊 Read Aloud';
+                    ttsBtn.style.cssText = `
+                        background: transparent;
+                        border: 1px solid rgba(156, 163, 175, 0.35);
+                        color: inherit;
+                        opacity: 0.85;
+                        border-radius: 6px;
+                        padding: 4px 12px;
+                        font-size: 11px;
+                        font-weight: 500;
+                        cursor: pointer;
+                        transition: all 0.2s ease;
+                    `;
+
+                    ttsBtn.onmouseover = () => { ttsBtn.style.opacity = '1'; ttsBtn.style.borderColor = '#2563EB'; };
+                    ttsBtn.onmouseout = () => { ttsBtn.style.opacity = '0.85'; ttsBtn.style.borderColor = 'rgba(156, 163, 175, 0.35)'; };
+
+                    ttsBtn.onclick = () => {
+                        const synth = window.parent.speechSynthesis;
+                        if (!synth) {
+                            ttsBtn.innerHTML = '❌ TTS Unsupported';
+                            return;
+                        }
+                        if (synth.speaking) {
+                            synth.cancel();
+                            ttsBtn.innerHTML = '🔊 Read Aloud';
+                            ttsBtn.style.borderColor = 'rgba(156, 163, 175, 0.35)';
+                            return;
+                        }
+
+                        const markdownEl = msg.querySelector('[data-testid="stMarkdownContainer"]');
+                        if (!markdownEl) return;
+                        let cleanText = markdownEl.innerText
+                            .replace(/```[\s\S]*?```/g, ' Code snippet omitted. ')
+                            .replace(/`([^`]+)`/g, '$1')
+                            .replace(/\[\d+\]\s*/g, '')
+                            .replace(/[\$\#\*]/g, '')
+                            .trim();
+
+                        if (!cleanText) return;
+
+                        const utterance = new window.parent.SpeechSynthesisUtterance(cleanText);
+                        utterance.rate = 1.0;
+                        utterance.pitch = 1.0;
+                        utterance.lang = 'en-US';
+
+                        utterance.onstart = () => {
+                            ttsBtn.innerHTML = '⏹️ Stop Speaking';
+                            ttsBtn.style.borderColor = '#DC2626';
+                        };
+
+                        utterance.onend = utterance.onerror = () => {
+                            ttsBtn.innerHTML = '🔊 Read Aloud';
+                            ttsBtn.style.borderColor = 'rgba(156, 163, 175, 0.35)';
+                        };
+
+                        synth.speak(utterance);
+                    };
+                    actionBar.appendChild(ttsBtn);
+                }
             }
         });
     }
-    setInterval(injectCopyButtons, 600);
+
+    if (window.parent.__bsqe2ActionObserver) {
+        window.parent.__bsqe2ActionObserver.disconnect();
+    }
+    if (window.parent.__bsqe2ActionInterval) {
+        clearInterval(window.parent.__bsqe2ActionInterval);
+    }
+
+    let actionDebounceTimer = null;
+    function throttledInjectActionButtons() {
+        if (actionDebounceTimer) return;
+        actionDebounceTimer = setTimeout(() => {
+            actionDebounceTimer = null;
+            injectActionButtons();
+        }, 150);
+    }
+
+    const chatContainer = doc.querySelector('[data-testid="stMain"]') || doc.querySelector('.main') || doc.body;
+    if (chatContainer) {
+        const actionObserver = new MutationObserver(() => {
+            throttledInjectActionButtons();
+        });
+        actionObserver.observe(chatContainer, { childList: true, subtree: true });
+        window.parent.__bsqe2ActionObserver = actionObserver;
+    }
+
+    injectActionButtons();
     </script>
     """,
     height=0,
