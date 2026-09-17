@@ -1,0 +1,93 @@
+{
+  "Social Sector Statistics": [],
+  "Mathematical Economics": [
+    {
+      "role": "user",
+      "content": "hello"
+    },
+    {
+      "role": "assistant",
+      "content": "Hello! Great to connect with you. I'm your BSQE2 AI assistant, ready to help you master Mathematical Economics. \n\nWhat topic or problem are we tackling today? Whether it's optimization, comparative statics, matrix algebra, or dynamic systems, just let me know!"
+    },
+    {
+      "role": "user",
+      "content": "What are the key components of a well-structured research problem statement?"
+    },
+    {
+      "role": "assistant",
+      "content": "Based on the provided context, the specific components of a research problem statement are not explicitly detailed (the context only briefly mentions managerial problem definition in Chunk 1). \n\nBelow is the standard, structured framework for a well-structured research problem statement in **Mathematical Economics and Quantitative Methodology**:\n\n---\n\n### Key Components of a Well-Structured Research Problem Statement\n\nA precise research problem statement bridges the gap between an existing theoretical or practical issue and the quantitative framework used to resolve it.#### 1. Context and Background (The Ideal Scenario)\n* **Description:** Establishes the standard economic baseline, theoretical benchmark, or practical environment.\n* **Economic Example:** Standard consumer theory assumes perfect information and rational agents maximizing utility under a budget constraint:\n  $$\\max_{x} U(x) \\quad \\text{s.t.} \\quad p^T x \\le I$$\n\n#### 2. The Research Gap or Problem Definition (The Reality / Contradiction)\n* **Description:** Clearly highlights the deficiency, theoretical breakdown, market failure, or empirical contradiction in current literature or practice.\n* **Mathematical/Economic Formulation:** Identifies the friction or missing variable (e.g., transaction costs $c(x)$, asymmetric information $\\theta$, or dynamic shocks $\\epsilon_t$):\n  $$\\max_{x} U(x, \\theta) - c(x) \\quad \\text{where } \\theta \\text{ is unobserved.}$$\n\n#### 3. Scope and Variable Definition\n* **Description:** Explicitly delineates the boundaries of the study, specifying endogenous choice variables, exogenous parameters, constraints, and statistical domain.\n* **Components:**\n  * **Choice Variables:** $x \\in \\mathbb{R}^n_+$\n  * **Exogenous Parameters/Vectors:** $\\mathbf{p}, I, \\theta \\in \\Omega$\n  * **Constraints:** $g_k(x, \\mathbf{p}) \\le 0 \\quad \\text{for } k = 1, \\dots, m$\n\n#### 4. Research Objectives or Testable Hypotheses\n* **Description:** Formulates precise, measurable questions or econometric hypotheses derived from the structural model.\n* **Formulation:**\n  * **Null Hypothesis ($H_0$):** $\\frac{\\partial x_i^*}{\\partial p_j} = 0$ (No cross-price responsiveness)\n  * **Alternative Hypothesis ($H_1$):** $\\frac{\\partial x_i^*}{\\partial p_j} \\neq 0$\n\n#### 5. Significance and Practical/Policy Impact\n* **Description:** Explains why solving the problem matters economically, detailing implications for firm decision-making, welfare optimization, or macroeconomic policy.",
+      "sources": [
+        {
+          "source": "Course Materials",
+          "page": "",
+          "snippet": "setting or context, and how does it influence managerial objectives or options?\nDecisions do not occur in a vacuum. Many come about as part of the firm’s planning \nprocess. Others are prompted by new opportunities or new problems. It is natural to ask, \nwhat brought about the nee…"
+        },
+        {
+          "source": "Course Materials",
+          "page": "",
+          "snippet": "What features do you value most? Have you seen our current advertising campaign? Do \nyou purchase competing products? What do you like about them?\nConsumer product companies use surveys extensively. In a given year, Campbell \nSoup Company questions over 100,000 consumers about fo…"
+        },
+        {
+          "source": "Course Materials",
+          "page": "",
+          "snippet": "The test bank contains over 500 multiple-choice questions, quantitative problems, essay \nquestions, and mini-cases. \nRespondus Test Bank The test bank is available electronically in Respondus format \non the book  companion site.\nOnline Chapter Chapter 17 is now available on the b…"
+        },
+        {
+          "source": "Course Materials",
+          "page": "",
+          "snippet": "advantages of large-scale production while mitigating the attendant agency problems \nand agency costs.\nThe design of organizational structure involves three issues:\n1. Determining the boundaries of the firm, that is, deciding which activities the firm \nshould undertake internally…"
+        },
+        {
+          "source": "Course Materials",
+          "page": "",
+          "snippet": "despite their startup disadvantages relative to industry leaders—spearhead some of the \nmost dramatic innovations?\nRecent research points to a number of possible reasons. First, the large multiproduct \nfirm is understandably reluctant to risk cannibalizing its existing products b…"
+        }
+      ]
+    }
+  ],
+  "Research Methods": [
+    {
+      "role": "user",
+      "content": "hello"
+    },
+    {
+      "role": "assistant",
+      "content": "Hello! Great to connect with you. As your BSQE2 Research Methods assistant, I'm here to help you master everything from research design and hypothesis formulation to data analysis and econometrics. \n\nWhat are we tackling today?"
+    },
+    {
+      "role": "user",
+      "content": "What are the key components of a well-structured research problem statement?"
+    },
+    {
+      "role": "assistant",
+      "content": "*Note: The provided context outlines the foundation of formulating a research problem (the \"4 Ps\": People, Problems, Programs, Phenomena), but does not explicitly detail the structural components of a problem statement. The answer below combines the context's formulation framework with standard statistical research methodology principles.*\n\n---\n\n### Key Components of a Well-Structured Research Problem Statement\n\nA research problem statement clearly defines the gap between the current state and a desired state. A well-structured problem statement consists of **four key components**:\n\n1. **The Ideal Situation (Context / Background)**\n   * **Definition:** Describes the desired condition, goal, standard, or theoretical expectation. \n   * **Purpose:** Establishes the baseline of how things *should* be.\n\n2. **The Current Reality & Knowledge Gap (The Problem)**\n   * **Definition:** Identifies the actual current situation, conflict, failure, or missing evidence that prevents the ideal state from being achieved.\n   * **Purpose:** Highlights the specific research gap or issue that needs resolution.\n\n3. **Consequences & Significance (The \"So What?\")**\n   * **Definition:** Explains the impact, risks, or costs of leaving the problem unresolved.\n   * **Purpose:** Justifies the need for the study and demonstrates its practical or theoretical significance.\n\n4. **Proposed Solution / Research Aim**\n   * **Definition:** States the specific objective, scope, or overarching research question designed to address the problem.\n   * **Purpose:** Directly connects the identified problem to the research methodology that follows.\n\n---\n\n### Course Alignment: The \"4 Ps\" Framework\nWhen framing these components, a research problem typically revolves around one or more of the course's **4 Ps**:\n* **People:** The specific group or population affected by the issue.\n* **Problems:** The specific issues, challenges, or attitudes being measured.\n* **Programs:** The interventions or policy measures being evaluated for effectiveness.\n* **Phenomena:** The observed patterns, regularities, or trends being established.",
+      "sources": [
+        {
+          "source": "Course Materials",
+          "page": "",
+          "snippet": "Build and test hypotheses. Tenative hypotheses are constructed based on emergent concepts and \nthemes that are generalisable across case sites. These hypotheses should be compared iteratively \nwith observed evidence to see if they fit the observ ed data, and if not, the construct…"
+        },
+        {
+          "source": "Course Materials",
+          "page": "",
+          "snippet": "The word research is composed of two key words: re and search. ‘re’ is a prefix meaning again, \nnew or over again while the word ‘search’ is a verb meaning to examine closely and carefully, \nto test , or to probe. Together they form a noun describing a careful, systematic,   and…"
+        },
+        {
+          "source": "Course Materials",
+          "page": "",
+          "snippet": "mathematical operations. The measurement of variables like  income, age, height and weight \nare examples of this scale. A person who is 40 year old is twice as old as one who is 20 year \nold. \n1.4.4  Formulating the research problem: \nResearch in social sciences revolves around f…"
+        },
+        {
+          "source": "Course Materials",
+          "page": "",
+          "snippet": "A research can be guided by having a hypotheses or research questions but not both  in most \ncases. Most studies that use quantitative data utilize hypotheses while studies that purely use \nqualitative data will utilize research questions. Here below are examples of research ques…"
+        },
+        {
+          "source": "Course Materials",
+          "page": "",
+          "snippet": "than statistical benchmarks for construct validity or significance testing. \nLastly, data collection and analysis can proceed simultaneously and iteratively in interpretive \nresearch. For instance, the r esearcher may conduct an interview and code it bef ore proceeding \nto the ne…"
+        }
+      ]
+    }
+  ]
+}

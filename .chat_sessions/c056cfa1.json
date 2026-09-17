@@ -1,0 +1,57 @@
+{
+  "Social Sector Statistics": [
+    {
+      "role": "user",
+      "content": "hello"
+    },
+    {
+      "role": "assistant",
+      "content": "Hello! Great to connect with you. I'm your BSQE2 AI study assistant, ready to help you tackle Social Sector Statistics. \n\nWhat topic, dataset, or concept are we working on today?"
+    }
+  ],
+  "Economic Statistics II": [
+    {
+      "role": "user",
+      "content": "hello"
+    },
+    {
+      "role": "assistant",
+      "content": "Hello! Great to connect with you. I’m your BSQE2 AI study assistant, ready to help you master Economic Statistics II. \n\nWhat topic, concept, or problem are we tackling today?"
+    },
+    {
+      "role": "user",
+      "content": "Balance of payment "
+    },
+    {
+      "role": "assistant",
+      "content": "In economic statistics, the Balance of Payments (BOP) provides a structured statistical accounting of an economy's transactions with the rest of the world. Under the standard presentation, it features two primary balancing lines:\n\n1. **Current Account Entries vs. Accumulation Entries:** The balancing item is the **Current Account Balance (CAB)**, which sums the balance on trade in goods ($BTG$), trade in services ($BTS$), primary income ($BPI$), and secondary income ($BSI$).\n2. **Financial Entries vs. Nonfinancial Entries:** The balancing item is **Net Lending / Net Borrowing**, which reflects the net financial flows corresponding to real transactions.\n\nFrom a macroeconomic perspective, the current account is linked to national saving and investment ($S - I = CAB$). Any net acquisition of resources from the rest of the world (a current account deficit) must be paid for by either liquidating foreign assets or increasing liabilities to nonresidents, expressed analytically as $CAB = NKF + RT$ (where $NKF$ represents net financial flows and $RT$ represents reserve transactions).",
+      "sources": [
+        {
+          "source": "Course Materials",
+          "page": "",
+          "snippet": "net acquisition of resources from the rest of the world \nmust be paid for by either liquidating foreign assets or \nincreasing liabilities to nonresidents.\nC. Alternative Presentations of \nBalance of Payments Data\n14.14 The different presentations discussed below \ncan be used to h…"
+        },
+        {
+          "source": "Course Materials",
+          "page": "",
+          "snippet": "ance of payments crisis). Therefore, policy measures \naimed at mitigating the adjustment path may need to \nbe considered.\n14.40 For balance of payments analysis, it is there-\nfore important to consider the possible introduction of \nadjustment measures to achieve a viable external…"
+        },
+        {
+          "source": "Course Materials",
+          "page": "",
+          "snippet": "not the payer receives a financial claim on the debtor \nin respect of the debt service payments it has made on \nbehalf of the debtor.\nA2.56 If the paying entity and the original debtor are \nresident in the same economy, then no balance of pay-\nments transactions are reported betw…"
+        },
+        {
+          "source": "Course Materials",
+          "page": "",
+          "snippet": "est accrues can be a percentage of the amount outstand-\ning, a predetermined sum of money, a variable sum of \nmoney dependent on a defined indicator, or some com-\nbination of these methods. Under the accrual basis, as \ninterest accrues, the amount outstanding increases; that \nis,…"
+        },
+        {
+          "source": "Course Materials",
+          "page": "",
+          "snippet": "the Balance Sheet Approach in Surveillance: \nFramework, Data Sources, and Data Availability ,\nIMF Working Paper (WP/06/100).\nOECD, OECD Handbook on Economic Globalisation \nIndicators.\nPolak, Jacques J., The Two Monetary Approaches to the \nBalance of Payments: Keynesian and Johnso…"
+        }
+      ]
+    }
+  ]
+}

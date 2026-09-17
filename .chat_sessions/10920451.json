@@ -1,0 +1,13 @@
+{
+  "Social Sector Statistics": [],
+  "Mathematical Economics": [
+    {
+      "role": "user",
+      "content": "hello"
+    },
+    {
+      "role": "assistant",
+      "content": "Hello! Great to see you. I'm your BSQE2 AI assistant, ready to help you master Mathematical Economics. \n\nWhat topic or problem are we tackling today?"
+    }
+  ]
+}

@@ -1,0 +1,51 @@
+{
+  "Social Sector Statistics": [],
+  "Mathematical Economics": [],
+  "Business Strategic Models": [],
+  "Micro Economics": [],
+  "Research Methods": [
+    {
+      "role": "user",
+      "content": "hello"
+    },
+    {
+      "role": "assistant",
+      "content": "Hello! Great to connect with you. I'm ready to help you tackle your Research Methods coursework—whether you need help with research design, formulating hypotheses, or analyzing data. \n\nWhat are we working on today?"
+    },
+    {
+      "role": "user",
+      "content": "http://localhost:8501"
+    },
+    {
+      "role": "assistant",
+      "content": "This input appears to be a local web server address (commonly the default address for a Streamlit application running locally) rather than a research methods question. \n\nPlease submit your research methodology, statistics, or STA2123-related question so I can assist you.",
+      "sources": [
+        {
+          "source": "Course Materials",
+          "page": "",
+          "snippet": "– References   \n– Appendices  \n \n  Developed by: Asiimwe John Bosco (PhD), School of Statistics & Planning \n \nSample of cover Page (Include University Logo): \n \nTHE CONTRIBUTION OF SAVINGS AND CREDIT COOPERATIVES \n(SACCOs) TOWARDS THE IMPROVED LIVELIHOOD OF LOW INCOME \nEARNERS…"
+        },
+        {
+          "source": "Course Materials",
+          "page": "",
+          "snippet": "statement, objectives/hypotheses/research questions, significance and study s cope), literature review, \nmethodology, time schedule, budget, references and appendices). The final research report includes all the \nabove – including choosing of appropriate elements of sampling theo…"
+        },
+        {
+          "source": "Course Materials",
+          "page": "",
+          "snippet": "education level associated with access to improved water source  among people living in \nslum areas in Kampala. \nExplanatory research attempts to clarify why and how there is a relationship between two or \nmore aspects of a situation or phenomenon. Exploratory research is underta…"
+        },
+        {
+          "source": "Course Materials",
+          "page": "",
+          "snippet": "same or similar instruments for estimating employment by sector or population growth by \nethnicity over multiple employment surveys or censuses. If any changes are made to the \nmeasuring instruments, estimates are provided with and without the changed instrumentation to \nallow th…"
+        },
+        {
+          "source": "Course Materials",
+          "page": "",
+          "snippet": "Follow APA Format – 6th Edition. Refer to the website: \nhttp://www.calstatela.edu/library/guides/3apa.pdf.  \nExamples:  \nBook: Rao, J.N.K. (2003). Small Area Estimation: John Wiley & Sons, Inc, New Jersey. \nJournal: Ramis-Prieto R., Garcı´a-Pe´rez J., Polla´n M., Aragone´s N., Pe…"
+        }
+      ]
+    }
+  ]
+}

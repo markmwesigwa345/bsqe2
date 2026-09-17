@@ -1,0 +1,54 @@
+{
+  "Social Sector Statistics": [
+    {
+      "role": "user",
+      "content": "Hello"
+    },
+    {
+      "role": "assistant",
+      "content": "Hello! Great to connect with you. As your BSQE2 study assistant, I’m ready to help you master Social Sector Statistics today. \n\nWhat topic, dataset, or problem set are we diving into?"
+    },
+    {
+      "role": "user",
+      "content": "Give me the challenges facing the energy sector."
+    },
+    {
+      "role": "assistant",
+      "content": "Based on the course material, the energy sector faces several major interconnected challenges:\n\n1. **Managing Price Volatility and Security of Supply:** Ensuring an adequate, reliable energy supply at reasonable prices while mitigating the impact of high energy prices and severe price volatility on consumers.\n2. **Solving the Energy Access Problem:** Developing new initiatives and alternative strategies—such as selective intervention, free trade practices, access to low-cost capital, and efficient technologies—to extend energy access.\n3. **Transitioning to Sustainable Practices:** Overcoming a history of unsustainable energy practices and sustained market failures by driving a paradigm shift toward long-term environmental and climate sustainability.\n4. **Overcoming Market Failures:** Recognizing that market-oriented policies alone do not address all sector needs, particularly regarding climate protection, security of supply, and investment in socially desired areas.\n5. **Navigating Energy Transitions and Technological Shifts:** Managing the uncertainties, costs, and risks of adaptation associated with major global energy transitions and technological obsolescence.",
+      "sources": [
+        {
+          "source": "Course Materials",
+          "page": "",
+          "snippet": "Issues Facing the Energy SectorChapter 18\nOverview of Global Energy Challenges\n18.1 Introduction 1\nThis chapter provides a stylised overview of the issues and challenges faced by the\nenergy sector. It starts by taking stock of the historical developments and goes\nthrough various…"
+        },
+        {
+          "source": "Course Materials",
+          "page": "",
+          "snippet": "sector would perhaps charter a new path where the sector activities are organised\nand performed differently.\nConcurrently, in a dynamic world where profound political, social, economic,\ntechnological and even ideological changes shape our present and future lives and\nliving condi…"
+        },
+        {
+          "source": "Course Materials",
+          "page": "",
+          "snippet": "obsolescence while the consumers face the prospect of high prices. Managing the\nimpact of energy price volatility and ensuring adequate supply at reasonable prices\nbecomes the priority for the consumers.\nSimilarly, the energy access problem begs new initiatives and thinking.\nAlte…"
+        },
+        {
+          "source": "Course Materials",
+          "page": "",
+          "snippet": "and policies at various levels. Finding those solutions to manage the sector in a\nsustainable manner remains the most important management challenge.\nReferences\nBhattacharyya SC (2007a) Energy sector management issues: an overview. Int J Energy Sector\nManage 1(1):13–33\nBhattachar…"
+        },
+        {
+          "source": "Course Materials",
+          "page": "",
+          "snippet": "associated with adjustment and adaptation required for such changes and the fear\nof being caught unprepared make investigations into this subject interesting.\nSimilarly, not so long ago we tended to think that the markets are the solutions\nfor all evils in the sector and market-o…"
+        }
+      ]
+    }
+  ],
+  "Micro Economics": [],
+  "Mathematical Economics": [
+    {
+      "role": "user",
+      "content": "hello"
+    }
+  ]
+}

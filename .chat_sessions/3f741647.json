@@ -1,0 +1,12 @@
+{
+  "Social Sector Statistics": [
+    {
+      "role": "user",
+      "content": "hello"
+    },
+    {
+      "role": "assistant",
+      "content": "Hello! Great to connect with you. As your BSQE2 AI assistant, I'm ready to help you master Social Sector Statistics—whether you're working through human development indices, poverty metrics, demography, or data analysis. \n\nWhat topic or problem should we tackle today?"
+    }
+  ]
+}
