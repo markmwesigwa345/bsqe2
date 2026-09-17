@@ -1,0 +1,47 @@
+{
+  "Social Sector Statistics": [
+    {
+      "role": "user",
+      "content": "Energy sector"
+    },
+    {
+      "role": "assistant",
+      "content": "Based on the provided course material, the energy sector is a critical component of the economy that provides key inputs for daily life and for production processes that transform resources into goods and services. \n\nKey aspects of the energy sector highlighted in the context include:* **Strategic and Economic Importance:** The sector holds multi-dimensional strategic importance macroeconomically, playing a foundational role across primary end-use sectors, including industry (manufacturing, mining, construction), transport, residential, commercial, and agriculture.\n* **Complex and Dynamic Challenges:** Issues facing the sector are multi-faceted, spatially differentiated, and dynamic. They are continuously shaped by global political, social, economic, technological, and ideological changes.\n* **Energy Transitions:** Historically, the global energy system undergoes major energy transitions that profoundly alter energy demand, supply, industry operations, and overall economic conduct. \n* **Management Challenge:** Managing the energy sector sustainably while adapting to transitions and mitigating the pain and costs associated with changes remains the primary challenge facing energy policymakers and managers.",
+      "sources": [
+        {
+          "source": "Course Materials",
+          "page": "",
+          "snippet": "Issues Facing the Energy SectorChapter 18\nOverview of Global Energy Challenges\n18.1 Introduction 1\nThis chapter provides a stylised overview of the issues and challenges faced by the\nenergy sector. It starts by taking stock of the historical developments and goes\nthrough various…"
+        },
+        {
+          "source": "Course Materials",
+          "page": "",
+          "snippet": "sector would perhaps charter a new path where the sector activities are organised\nand performed differently.\nConcurrently, in a dynamic world where profound political, social, economic,\ntechnological and even ideological changes shape our present and future lives and\nliving condi…"
+        },
+        {
+          "source": "Course Materials",
+          "page": "",
+          "snippet": "References\nBhattacharyya SC (2007) Energy sector management issues: an overview. Int J Energy Sect\nManag 1(1):13–33\nEdwards BK (2003) The economics of hydroelectric power. Edward Elgar, Cheltenham\nStevens P (2000) An introduction to energy economics. In: Stevens P (ed) The econom…"
+        },
+        {
+          "source": "Course Materials",
+          "page": "",
+          "snippet": "and policies at various levels. Finding those solutions to manage the sector in a\nsustainable manner remains the most important management challenge.\nReferences\nBhattacharyya SC (2007a) Energy sector management issues: an overview. Int J Energy Sector\nManage 1(1):13–33\nBhattachar…"
+        },
+        {
+          "source": "Course Materials",
+          "page": "",
+          "snippet": "sectors: industry, transport, residential, commercial, agriculture and non-energy\nuses. However, very often because of data limitations, residential and commercial\nsectors are grouped together. In some tables, agriculture is combined with the\nresidential-commercial sectors to giv…"
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": "Examples of energy"
+    },
+    {
+      "role": "assistant",
+      "content": "⏳ **The study assistant is currently busy with high request volume.** Please wait about 20–30 seconds before asking your next question.\n\n*If this continues, you may contact **Mwesigwa Mark** at **+256 701913028** for assistance.*"
+    }
+  ]
+}

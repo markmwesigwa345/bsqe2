@@ -1797,10 +1797,8 @@ if user_prompt := st.chat_input(f"Ask a question about {selected_subject_name}�
                         with col:
                             if st.button(q, key=f"fu_{hash(q)}", use_container_width=True):
                                 st.session_state.followup_clicked = q
-                # Flashcard button
-                if st.button("🃏 Generate Flashcards", key=f"fc_{len(current_messages)}"):
-                    st.session_state.generate_flashcards = True
-                    st.session_state.flashcard_docs = retrieved_docs
+                # Persist retrieved docs so the flashcard button survives reruns
+                st.session_state[f"last_retrieved_docs_{selected_subject_name}"] = retrieved_docs
 
             if not full_response:
                 full_response = (
@@ -1837,6 +1835,13 @@ if user_prompt := st.chat_input(f"Ask a question about {selected_subject_name}�
     current_messages.append(assistant_msg)
     save_session_history(session_id, st.session_state.subject_messages)
 
+# ── Persistent Flashcard Trigger (survives reruns triggered by any widget click) ──
+_last_docs_key = f"last_retrieved_docs_{selected_subject_name}"
+if current_messages and current_messages[-1]["role"] == "assistant" and st.session_state.get(_last_docs_key):
+    if st.button("🃏 Generate Flashcards", key=f"fc_persist_{session_id}_{selected_subject_name}_{len(current_messages)}"):
+        st.session_state.generate_flashcards = True
+        st.session_state.flashcard_docs = st.session_state[_last_docs_key]
+        
 # ── Flashcard Panel ───────────────────────────────────────────────────────────
 if st.session_state.get("generate_flashcards") and st.session_state.get("flashcard_docs"):
     st.session_state.generate_flashcards = False
